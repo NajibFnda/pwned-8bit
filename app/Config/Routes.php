@@ -8,9 +8,15 @@ use CodeIgniter\Router\RouteCollection;
 // Rute Halaman Utama (Cek Email & Statistik)
 $routes->get('/', 'Home::index');
 $routes->post('cek-email', 'Home::cekEmail');
+// Rute Halaman Utama (Cek Email & Statistik)
+$routes->get('/', 'Home::index');
+$routes->post('cek-email', 'Home::cekEmail');
+$routes->get('cek-email', 'Home::index'); // <-- TAMBAHKAN BARIS INI UNTUK MENCEGAH 404 SAAT REFRESH
 
 // Rute Baru khusus Halaman Upgrade Pricing
 $routes->get('upgrade', 'Home::upgrade');
+
+$routes->get('cek-email', 'Home::index'); // Sesuaikan 'Home::index' dengan nama controller halaman utamamu
 
 // Mengelompokkan route khusus admin
 $routes->group('admin', function($routes) {

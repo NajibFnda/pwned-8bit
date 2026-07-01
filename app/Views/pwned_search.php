@@ -159,7 +159,7 @@
                     <p class="text-xs uppercase font-bold text-gray-500 tracking-widest">Masukkan email yang ingin Anda periksa.</p>
                 </div>
 
-                <form action="<?= base_url('cek-email') ?>#cek-section" method="POST" class="max-w-2xl mx-auto mt-8 flex flex-col items-center gap-4">
+                <form action="<?= base_url('cek-email') ?>#hasil-cek" method="POST" class="max-w-2xl mx-auto mt-8 flex flex-col items-center gap-4">
                     <?= csrf_field() ?>
                     <div class="w-full flex flex-col md:flex-row gap-0 border-[4px] border-black p-1 bg-white shadow-[6px_6px_0px_rgba(0,0,0,1)] relative">
                         <input type="email" name="email" placeholder="contoh@email.com" required
@@ -200,8 +200,8 @@
 
             <!-- Account Analysis Section -->
             <?php if (isset($status) && $status !== null): ?>
-            
-            <hr class="border-t-[4px] border-dashed border-gray-400 my-16">
+
+            <hr id="hasil-cek" class="border-t-[4px] border-dashed border-gray-400 my-16 scroll-mt-24">
             
             <div class="space-y-6">
                 <div class="flex items-center gap-2 mb-6">
