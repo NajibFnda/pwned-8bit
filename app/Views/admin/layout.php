@@ -19,7 +19,7 @@
         .font-mono { font-family: 'JetBrains Mono', monospace; }
     </style>
 </head>
-<body class="bg-gray-200 text-black font-mono">
+<body class="bg-[url('<?= base_url('image/background_retro.png') ?>')] bg-repeat font-sans">
 
     <!-- SIDEBAR: fixed, tidak ikut scroll -->
     <aside class="w-64 fixed top-0 left-0 h-screen bg-white border-r-4 border-black flex flex-col z-40">
@@ -58,7 +58,7 @@
     </aside>
 
     <!-- KONTEN UTAMA: ml-64 supaya tidak tertutup sidebar -->
-    <main class="ml-64 p-8 bg-gray-100 min-h-screen">
+    <main class="ml-64 p-8 min-h-screen">
         <?= $this->renderSection('content') ?>
     </main>
 

@@ -20,7 +20,7 @@
     <div class="text-2xl font-pixel text-blue-400">
         Rp <?= number_format($total_pendapatan ?? 0, 0, ',', '.') ?>
     </div>
-    <div class="absolute top-3 right-4 text-[10px] text-green-400 font-bold uppercase animate-pulse">LIVE</div>
+    <!-- <div class="absolute top-3 right-4 text-[10px] text-green-400 font-bold uppercase animate-pulse">LIVE</div> -->
 </div>
 
 <!-- Riwayat transaksi -->
