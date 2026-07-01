@@ -20,9 +20,9 @@
         }
     </style>
 </head>
-<body class="bg-[#111] text-black font-mono flex flex-col items-center justify-center min-h-screen p-4 py-12">
+<body class="bg-slate-300 text-black font-mono flex flex-col items-center justify-center min-h-screen p-4 py-12">
 
-    <div class="mb-8 text-center bg-white border-4 border-black p-4 shadow-[6px_6px_0px_rgba(255,255,255,1)] inline-block">
+    <div class="mb-8 text-center bg-white border-4 border-black p-4 shadow-[8px_8px_0px_rgba(0,0,0,1)] relative">
         <a href="<?= base_url('/') ?>" class="text-2xl font-pixel tracking-widest text-black">
             PWNED
         </a>
@@ -31,23 +31,23 @@
 
     <div class="max-w-md w-full space-y-8">
         <!-- AREA STRUK (Bagian ini yang akan dijadikan PDF) -->
-        <div id="area-struk" class="bg-white p-8 border-4 border-black shadow-[8px_8px_0px_rgba(255,255,255,1)] relative">
+        <div id="area-struk" class="bg-white p-8 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] relative">
             <!-- Pinggiran kertas berlubang -->
             <div class="absolute -left-3 top-4 bottom-4 flex flex-col justify-between">
-                <div class="w-4 h-4 bg-[#111] rounded-full border-2 border-black"></div>
-                <div class="w-4 h-4 bg-[#111] rounded-full border-2 border-black"></div>
-                <div class="w-4 h-4 bg-[#111] rounded-full border-2 border-black"></div>
-                <div class="w-4 h-4 bg-[#111] rounded-full border-2 border-black"></div>
-                <div class="w-4 h-4 bg-[#111] rounded-full border-2 border-black"></div>
-                <div class="w-4 h-4 bg-[#111] rounded-full border-2 border-black"></div>
+                <div class="w-4 h-4 bg-slate-300 rounded-full border-2 border-black"></div>
+                <div class="w-4 h-4 bg-slate-300 rounded-full border-2 border-black"></div>
+                <div class="w-4 h-4 bg-slate-300 rounded-full border-2 border-black"></div>
+                <div class="w-4 h-4 bg-slate-300 rounded-full border-2 border-black"></div>
+                <div class="w-4 h-4 bg-slate-300 rounded-full border-2 border-black"></div>
+                <div class="w-4 h-4 bg-slate-300 rounded-full border-2 border-black"></div>
             </div>
             <div class="absolute -right-3 top-4 bottom-4 flex flex-col justify-between">
-                <div class="w-4 h-4 bg-[#111] rounded-full border-2 border-black"></div>
-                <div class="w-4 h-4 bg-[#111] rounded-full border-2 border-black"></div>
-                <div class="w-4 h-4 bg-[#111] rounded-full border-2 border-black"></div>
-                <div class="w-4 h-4 bg-[#111] rounded-full border-2 border-black"></div>
-                <div class="w-4 h-4 bg-[#111] rounded-full border-2 border-black"></div>
-                <div class="w-4 h-4 bg-[#111] rounded-full border-2 border-black"></div>
+                <div class="w-4 h-4 bg-slate-300 rounded-full border-2 border-black"></div>
+                <div class="w-4 h-4 bg-slate-300 rounded-full border-2 border-black"></div>
+                <div class="w-4 h-4 bg-slate-300 rounded-full border-2 border-black"></div>
+                <div class="w-4 h-4 bg-slate-300 rounded-full border-2 border-black"></div>
+                <div class="w-4 h-4 bg-slate-300 rounded-full border-2 border-black"></div>
+                <div class="w-4 h-4 bg-slate-300 rounded-full border-2 border-black"></div>
             </div>
 
             <div class="text-center mb-6 border-b-4 border-dashed border-black pb-6">
@@ -86,12 +86,11 @@
 
         <!-- TOMBOL AKSI (Tidak ikut tercetak di PDF) -->
         <div class="flex gap-4 pt-4">
-            <a href="<?= base_url('/') ?>" class="w-1/3 bg-gray-400 hover:bg-gray-500 border-4 border-white text-black text-center font-pixel text-[10px] py-4 uppercase shadow-[4px_4px_0px_rgba(255,255,255,1)] transition-none">
+            <a href="<?= base_url('/') ?>" class="w-1/3 bg-gray-400 hover:bg-gray-500 border-4 border-black text-black text-center font-pixel text-[10px] py-4 uppercase shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-none">
                 < DASHBOARD
             </a>
-            <button onclick="downloadPDF()" class="w-2/3 bg-blue-600 hover:bg-blue-800 border-4 border-white text-white text-center font-pixel text-[10px] py-4 uppercase shadow-[4px_4px_0px_rgba(255,255,255,1)] transition-none flex justify-center items-center gap-2">
+            <button onclick="downloadPDF()" class="w-2/3 bg-blue-600 hover:bg-blue-800 border-4 border-black text-white text-center font-pixel text-[10px] py-4 uppercase shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-none flex justify-center items-center gap-2">
                 <span>DOWNLOAD PDF</span>
-                <span>[v]</span>
             </button>
         </div>
     </div>
