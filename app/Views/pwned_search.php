@@ -15,10 +15,10 @@
         .font-mono { font-family: 'JetBrains Mono', monospace; }
     </style>
 </head>
-<body class="bg-[#111] text-black font-mono min-h-screen pb-8 md:pb-12 pt-0 flex justify-center">
+<body class="bg-black min-h-screen">
 
     <!-- Frame Mockup -->
-    <div class="w-full bg-white border-y-4 border-black flex flex-col relative">
+    <div class="w-full bg-[url('<?= base_url('image/background_retro.png') ?>')] bg-repeat border-y-4 border-black flex flex-col relative">
 
         <!-- Navbar -->
         <nav class="px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 bg-white z-50">

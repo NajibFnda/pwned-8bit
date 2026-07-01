@@ -13,7 +13,7 @@
         .font-mono { font-family: 'JetBrains Mono', monospace; }
     </style>
 </head>
-<body class="bg-gray-200 text-black font-mono min-h-screen flex flex-col justify-center items-center px-4">
+<body class="w-full bg-[url('<?= base_url('image/background_retro.png') ?>')] text-black font-mono min-h-screen flex flex-col justify-center items-center px-4">
 
     <div class="mb-8 text-center bg-white border-4 border-black p-4 shadow-[6px_6px_0px_rgba(255,255,255,1)] inline-block">
         <a href="<?= base_url('/') ?>" class="text-2xl font-pixel tracking-widest text-black">

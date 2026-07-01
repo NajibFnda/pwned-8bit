@@ -17,7 +17,7 @@
 <body class="bg-[#111] text-black font-mono min-h-screen pb-8 pt-0 flex justify-center">
 
     <!-- Frame Mockup -->
-    <div class="w-full bg-white border-y-4 border-black flex flex-col relative">
+    <div class="w-full bg-[url('<?= base_url('image/background_retro.png') ?>')] bg-repeat border-y-4 border-black flex flex-col relative">
 
         <!-- Navbar -->
         <nav class="px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 bg-white border-b-4 border-black z-50">
