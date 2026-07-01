@@ -1,0 +1,15 @@
+/* public/css/style.css */
+body {
+    background-color: #ffffff;
+    font-family: 'Courier New', Courier, monospace; /* Gunakan font pixel jika ada */
+}
+
+.card, .search-box {
+    border: 3px solid #000;
+    box-shadow: 5px 5px 0px #000; /* Ini kunci efek desain kamu */
+    padding: 20px;
+    background: #f0f0f0;
+}
+
+.red { color: #ff0000; }
+.green { color: #00ff00; }
