@@ -21,16 +21,13 @@
 </head>
 <body class="bg-[url('<?= base_url('image/background_retro.png') ?>')] bg-repeat font-sans">
 
-    <!-- SIDEBAR: fixed, tidak ikut scroll -->
     <aside class="w-64 fixed top-0 left-0 h-screen bg-white border-r-4 border-black flex flex-col z-40">
 
-        <!-- Header Sidebar -->
         <div class="flex-shrink-0 px-6 py-5 border-b-4 border-black bg-blue-600 text-white">
             <span class="text-xl font-pixel tracking-wider">PWNED</span>
             <p class="text-[10px] mt-2 tracking-widest uppercase font-bold">> Admin Panel</p>
         </div>
 
-        <!-- Menu navigasi (tengah, bisa scroll jika item banyak) -->
         <nav class="flex-1 overflow-y-auto px-4 py-6 space-y-4 font-bold uppercase text-sm">
             <a href="<?= base_url('admin') ?>"
                class="flex items-center gap-3 px-4 py-3 border-4 transition-none shadow-[4px_4px_0px_rgba(0,0,0,1)]
@@ -44,7 +41,6 @@
             </a>
         </nav>
 
-        <!-- Tombol HOME & LOGOUT: selalu menempel di bagian bawah sidebar -->
         <div class="flex-shrink-0 px-4 py-6 border-t-4 border-black space-y-4 font-bold uppercase text-xs bg-white">
             <a href="<?= base_url('/') ?>"
                class="flex items-center gap-3 px-4 py-3 bg-gray-300 border-4 border-black hover:bg-gray-400 text-black shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-none">
@@ -57,7 +53,6 @@
         </div>
     </aside>
 
-    <!-- KONTEN UTAMA: ml-64 supaya tidak tertutup sidebar -->
     <main class="ml-64 p-8 min-h-screen">
         <?= $this->renderSection('content') ?>
     </main>

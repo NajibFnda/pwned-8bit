@@ -1,20 +1,18 @@
 <?php
 /**
- * @var array       $users
- * @var float        $total_pendapatan
- * @var string|null  $filter_aktif
+ * @var array
+ * @var float
+ * @var string|null
  */
 ?>
 <?= $this->extend('admin/layout') ?>
 <?= $this->section('content') ?>
 
-<!-- HEADER -->
 <div class="mb-8 border-b-4 border-black pb-4">
     <h1 class="text-3xl font-pixel text-black uppercase">Manajemen Pengguna</h1>
     <p class="text-xs text-gray-500 mt-2 font-bold uppercase tracking-widest">> Atur hak akses dan masa berlaku langganan.</p>
 </div>
 
-<!-- NOTIFIKASI PESAN -->
 <?php if (session()->getFlashdata('pesan')): ?>
     <div class="bg-white border-4 border-black p-4 mb-8 shadow-[4px_4px_0px_rgba(0,0,0,1)] flex items-center gap-3">
         <span class="text-xl">!</span>
@@ -22,7 +20,6 @@
     </div>
 <?php endif; ?>
 
-<!-- AREA TABEL & FILTER -->
 <div class="flex flex-col md:flex-row justify-between items-end mb-6 gap-4">
     <h2 class="font-bold text-black uppercase tracking-widest text-lg">Daftar Pengguna</h2>
 
@@ -33,8 +30,7 @@
         <a href="<?= base_url('admin?paket=pro') ?>" class="px-4 py-2 <?= (isset($filter_aktif) && $filter_aktif == 'pro') ? 'bg-red-600 text-white' : 'text-black hover:bg-gray-200' ?>">Pro</a>
     </div>
 </div>
-
-<!-- TABEL DATA -->
+ 
 <div class="bg-white shadow-[6px_6px_0px_rgba(0,0,0,1)] border-4 border-black mb-12">
     <div class="overflow-x-auto">
         <table class="w-full text-left text-sm text-black">
@@ -89,10 +85,9 @@
     </div>
 </div>
 
-<!-- MODAL EDIT STATUS (8-Bit Style) -->
+
 <div id="editModal" class="fixed inset-0 bg-black bg-opacity-80 z-50 hidden flex justify-center items-center p-4">
     <div class="bg-white border-[6px] border-black w-full max-w-md p-0 shadow-[12px_12px_0px_rgba(255,255,255,0.2)] relative flex flex-col">
-        <!-- Modal Header -->
         <div class="bg-blue-600 border-b-[6px] border-black p-2 flex justify-between items-center text-white">
             <div class="font-pixel text-[10px] uppercase tracking-widest pl-2">USER_MANAGER.EXE</div>
             <button onclick="closeModal()" class="w-6 h-6 bg-red-500 border-2 border-black flex items-center justify-center font-bold hover:bg-red-700">X</button>

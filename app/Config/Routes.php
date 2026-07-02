@@ -5,20 +5,18 @@ use CodeIgniter\Router\RouteCollection;
 /**
  * @var RouteCollection $routes
  */
-// Rute Halaman Utama (Cek Email & Statistik)
 $routes->get('/', 'Home::index');
 $routes->post('cek-email', 'Home::cekEmail');
-// Rute Halaman Utama (Cek Email & Statistik)
 $routes->get('/', 'Home::index');
 $routes->post('cek-email', 'Home::cekEmail');
-$routes->get('cek-email', 'Home::index'); // <-- TAMBAHKAN BARIS INI UNTUK MENCEGAH 404 SAAT REFRESH
+$routes->get('cek-email', 'Home::index'); 
 
-// Rute Baru khusus Halaman Upgrade Pricing
+
 $routes->get('upgrade', 'Home::upgrade');
 
-$routes->get('cek-email', 'Home::index'); // Sesuaikan 'Home::index' dengan nama controller halaman utamamu
+$routes->get('cek-email', 'Home::index'); 
 
-// Mengelompokkan route khusus admin
+
 $routes->group('admin', function($routes) {
     $routes->get('/', 'AdminController::index');
     $routes->get('users', 'AdminController::users');
@@ -26,16 +24,15 @@ $routes->group('admin', function($routes) {
     $routes->get('sales', 'AdminController::sales');
 });
 
-// Route untuk halaman Login
+
 $routes->get('/login', 'Auth::login');
 
-$routes->post('/auth/process', 'Auth::process'); // Menangkap data dari form login
-$routes->get('/logout', 'Auth::logout'); // Untuk fitur keluar
+$routes->post('/auth/process', 'Auth::process'); 
+$routes->get('/logout', 'Auth::logout'); 
 
 $routes->get('/register', 'Auth::register');
 $routes->post('/auth/saveRegister', 'Auth::saveRegister');
 
-// Rute untuk memproses upgrade paket
 $routes->get('/upgrade/proses/(:segment)', 'Home::prosesUpgrade/$1');
 
 $routes->get('upgrade/nota/(:num)', 'Home::nota/$1');

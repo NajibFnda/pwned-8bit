@@ -10,7 +10,6 @@ class SearchHistoryModel extends Model
     protected $primaryKey = 'id';
     protected $allowedFields = ['user_id', 'email_checked', 'created_at'];
 
-    // Fungsi khusus untuk menghitung pencarian user hari ini
     public function countUserSearchesToday($user_id)
     {
         return $this->where('user_id', $user_id)

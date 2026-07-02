@@ -12,7 +12,6 @@ class AdminController extends BaseController
         $this->userModel = new UserModel();
     }
 
-    // Tampilkan daftar semua user
 public function index()
     {
         $session = session();
@@ -22,54 +21,42 @@ public function index()
 
         $transactionModel = new \App\Models\TransactionModel();
         
-        // --- FITUR FILTER USER ---
-        $filter_paket = $this->request->getGet('paket'); // Menangkap /admin?paket=pro
+        $filter_paket = $this->request->getGet('paket'); 
         
         if ($filter_paket && in_array($filter_paket, ['free', 'plus', 'pro'])) {
-            // Jika ada filter, ambil user dengan paket tersebut
             $users = $this->userModel->where('subscription_plan', $filter_paket)->findAll();
         } else {
-            // Jika tidak, ambil semua
             $users = $this->userModel->findAll();
         }
 
-        // --- FITUR MENGHITUNG PENDAPATAN ---
-        // Menggunakan query builder untuk menjumlahkan kolom 'harga'
         $db = \Config\Database::connect();
         $query = $db->query("SELECT SUM(harga) as total_uang FROM transactions");
         $hasil = $query->getRow();
         $total_pendapatan = $hasil->total_uang ?? 0;
 
         $data = [
-            'title'             => 'Manajemen Pengguna',   // ⬅️ baru
+            'title'             => 'Manajemen Pengguna', 
             'active'            => 'users', 
             'users'             => $users,
             'real_transactions' => $transactionModel->getTransactionsWithUser(),
             'total_pendapatan'  => $total_pendapatan,
-            'filter_aktif'      => $filter_paket // Untuk memberi tahu view filter apa yang sedang aktif
+            'filter_aktif'      => $filter_paket
         ];
 
         return view('admin/user_list', $data);
     }
-       // Proses update status langganan dari form
     public function updateSubscription($id)
     {
-        // Ambil data dari form (jenis paket dan tanggal kedaluwarsa)
         $plan = $this->request->getPost('subscription_plan');
         $expire = $this->request->getPost('expire_date');
 
-        // Update ke database
         $this->userModel->update($id, [
             'subscription_plan' => $plan,
             'expire_date' => $expire
         ]);
 
-        // Kembalikan ke halaman admin dengan pesan sukses
         return redirect()->to('/admin')->with('pesan', 'Status langganan berhasil diperbarui!');
     }
-    // ==========================================
-// DATA PENJUALAN
-// ==========================================
 public function sales()
 {
     $session = session();

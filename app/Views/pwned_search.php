@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="id" class="scroll-smooth">
-<head>
+<head >
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PWNED - Cek Kebocoran Data Anda</title>
@@ -21,12 +21,12 @@
     <div class="w-full bg-[url('<?= base_url('image/background_retro.png') ?>')] bg-repeat border-y-4 border-black flex flex-col relative">
 
         <!-- Navbar -->
-        <nav class="px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 bg-white z-50">
+        <nav class="sticky top-0 w-full px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 bg-white z-50">
             <div class="flex items-center space-x-2">
                 <span class="text-xl font-pixel text-black">PWNED</span>
             </div>
             
-            <div id="nav-container" class="hidden md:flex justify-center space-x-6 text-sm font-bold uppercase">
+            <div id="nav-container" class=" hidden md:flex justify-center space-x-6 text-sm font-bold uppercase">
                 <a href="#" id="nav-home" class="nav-link text-black hover:bg-black hover:text-white px-2 py-1 transition-none">HOME</a>
                 <a href="#cek-section" id="nav-cek" class="nav-link text-black hover:bg-black hover:text-white px-2 py-1 transition-none">CEK EMAIL</a>
                 <a href="#statistik-section" id="nav-statistik" class="nav-link text-black hover:bg-black hover:text-white px-2 py-1 transition-none">STATISTIK</a>
@@ -65,9 +65,19 @@
             <div class="m-6 bg-white border-4 border-black text-black px-6 py-4 flex items-center justify-between shadow-[4px_4px_0px_rgba(0,0,0,1)]">
                 <div class="flex items-center gap-3">
                     <span class="text-xl">!</span>
-                    <p class="font-bold text-sm uppercase"><?= session()->getFlashdata('success') ?></p>
+                    <p class="font-bold text-sm uppercase"><?= esc(session()->getFlashdata('success')) ?></p>
                 </div>
                 <button onclick="this.parentElement.style.display='none'" class="font-bold hover:text-red-600 text-xl">&times;</button>
+            </div>
+        <?php endif; ?>
+
+        <?php if(session()->getFlashdata('error')): ?>
+            <div class="m-6 bg-red-50 border-4 border-red-600 text-red-800 px-6 py-4 flex items-center justify-between shadow-[4px_4px_0px_rgba(220,38,38,1)]">
+                <div class="flex items-center gap-3">
+                    <span class="font-pixel text-[10px] text-red-600 border border-red-600 px-1">ERR</span>
+                    <p class="font-bold text-sm uppercase"><?= esc(session()->getFlashdata('error')) ?></p>
+                </div>
+                <button onclick="this.parentElement.style.display='none'" class="font-bold text-red-600 hover:text-red-800 text-xl">&times;</button>
             </div>
         <?php endif; ?>
 
@@ -89,15 +99,13 @@
                 </div>
                 <div class="flex justify-center">
                     <div class="border-4 border-black bg-gray-100 p-10 shadow-[6px_6px_0px_rgba(0,0,0,1)] text-center space-y-4">
-                        <span class="text-7xl block animate-bounce">🥷</span>
+                        <img src="<?= base_url('image/hacker.png') ?>" alt="Hacker" class="w-24 h-24 mx-auto object-contain">
                         <div class="bg-red-600 text-white text-[10px] font-pixel px-3 py-2 border-2 border-black uppercase tracking-widest shadow-[2px_2px_0px_rgba(0,0,0,1)]">DATA BREACH</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Restored Information Section (Styled in 8-bit) -->
             <div class="space-y-16">
-                <!-- Apa itu Kebocoran Data? -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center p-8 border-4 border-black bg-white shadow-[6px_6px_0px_rgba(0,0,0,1)]">
                     <div class="space-y-4">
                         <h2 class="text-xl font-pixel text-black flex items-center gap-2">
@@ -109,32 +117,29 @@
                     </div>
                     <div class="flex justify-center">
                         <div class="text-center border-4 border-black p-6 bg-gray-100">
-                            <span class="text-5xl block">💻</span>
-                            <span class="text-3xl block mt-2 animate-bounce">🔒</span>
+                            <img src="<?= base_url('image/Computer1.png') ?>" alt="Computer" class="w-24 h-24 mx-auto object-contain">
                         </div>
                     </div>
                 </div>
 
-                <!-- 3 Cards -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="bg-white p-6 border-[3px] border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] text-center space-y-4 transition-transform hover:-translate-y-1">
-                        <div class="text-blue-600 text-3xl">🛡️</div>
+                        <img src="<?= base_url('image/shield.png') ?>" alt="Shield" class="w-16 h-16 mx-auto object-contain">
                         <h3 class="font-bold text-black uppercase tracking-widest text-sm">Lindungi Akun Anda</h3>
                         <p class="text-gray-500 text-xs font-bold uppercase leading-relaxed">Mengetahui kebocoran lebih awal dapat membantu Anda mengamankan akun penting.</p>
                     </div>
                     <div class="bg-white p-6 border-[3px] border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] text-center space-y-4 transition-transform hover:-translate-y-1">
-                        <div class="text-blue-600 text-3xl">🔍</div>
+                        <img src="<?= base_url('image/Computer2.png') ?>" alt="Question" class="w-16 h-16 mx-auto object-contain">
                         <h3 class="font-bold text-black uppercase tracking-widest text-sm">Cek dengan Mudah</h3>
                         <p class="text-gray-500 text-xs font-bold uppercase leading-relaxed">Masukkan email Anda dan kami akan memeriksa ribuan data kebocoran.</p>
                     </div>
                     <div class="bg-white p-6 border-[3px] border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] text-center space-y-4 transition-transform hover:-translate-y-1">
-                        <div class="text-blue-600 text-3xl">📈</div>
+                        <img src="<?= base_url('image/FloppyDisk.png') ?>" alt="Data Terpercaya" class="w-16 h-16 mx-auto object-contain">
                         <h3 class="font-bold text-black uppercase tracking-widest text-sm">Data Terpercaya</h3>
                         <p class="text-gray-500 text-xs font-bold uppercase leading-relaxed">Kami menggunakan sumber data kebocoran yang diperbarui secara berkala.</p>
                     </div>
                 </div>
 
-                <!-- Mini Stats -->
                 <div class="bg-black text-white border-4 border-black shadow-[6px_6px_0px_rgba(100,100,100,1)] p-8 grid grid-cols-3 text-center gap-4">
                     <div class="border-r-2 border-dashed border-gray-600">
                         <div class="text-2xl md:text-3xl font-pixel text-blue-400">352K+</div>
@@ -152,7 +157,6 @@
             </div>
 
 
-            <!-- Cek Email Section (Form) -->
             <div id="cek-section" class="text-center space-y-8 scroll-mt-24 border-t-[4px] border-dashed border-gray-400 pt-16 mt-16">
                 <div class="space-y-2">
                     <h2 class="text-xl md:text-2xl font-pixel text-black">CEK EMAIL ANDA</h2>
@@ -198,7 +202,6 @@
                 </div>
             </div>
 
-            <!-- Account Analysis Section -->
             <?php if (isset($status) && $status !== null): ?>
 
             <hr id="hasil-cek" class="border-t-[4px] border-dashed border-gray-400 my-16 scroll-mt-24">
@@ -209,15 +212,12 @@
                     <h2 class="text-sm font-pixel text-gray-400 uppercase tracking-widest">ACCOUNT ANALYSIS</h2>
                 </div>
                 
-                <!-- Status Box -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Email Box -->
                     <div class="border-[3px] border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] bg-white relative pt-8">
                         <span class="absolute top-2 left-4 text-[10px] text-gray-500 uppercase font-bold tracking-widest">EMAIL</span>
                         <div class="font-bold text-sm truncate"><?= esc($email) ?></div>
                     </div>
 
-                    <!-- Breach Status Box -->
                     <?php if ($status === 'pwned'): ?>
                         <div class="border-[4px] border-red-600 p-4 shadow-[4px_4px_0px_rgba(220,38,38,1)] bg-white relative pt-8 flex items-center justify-between">
                             <span class="absolute top-2 left-4 text-[10px] text-red-600 uppercase font-bold tracking-widest">BREACH STATUS</span>
@@ -241,36 +241,110 @@
                     <?php endif; ?>
                 </div>
 
-                <!-- Breach Details Table -->
-                <?php if ($status === 'pwned'): ?>
-                <div class="border-[3px] border-black shadow-[6px_6px_0px_rgba(0,0,0,1)] bg-white p-6 mt-8 relative pt-10">
-                    <div class="absolute top-3 left-4 text-[10px] text-gray-500 uppercase font-bold tracking-widest">PWNED ON:</div>
-                    <div class="absolute top-3 right-4 text-[10px] text-blue-600 uppercase font-bold tracking-widest animate-pulse">LIVE_FEED: UPDATING...</div>
-                    
-                    <table class="w-full text-left text-sm font-bold text-black mt-2">
-                        <tbody class="divide-y-2 divide-dashed divide-gray-300">
-                            <?php if (isset($details) && !empty($details)): ?>
-                                <?php foreach ($details as $detail): ?>
-                                    <tr class="hover:bg-gray-100">
-                                        <td class="py-4 px-2"><?= esc($detail['sumber'] ?? '-') ?></td>
-                                        <td class="py-4 px-2 text-right text-gray-500"><?= esc($detail['tanggal'] ?? '-') ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <tr>
-                                    <td colspan="2" class="py-4 px-2 text-center text-gray-400 uppercase">NO DETAILS AVAILABLE</td>
-                                </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
+                <?php if ($status === 'pwned' && !empty($details)): ?>
+                <div class="border-[3px] border-black shadow-[6px_6px_0px_rgba(0,0,0,1)] bg-white mt-8 relative">
+
+                    <div class="bg-black text-white px-6 py-3 flex justify-between items-center">
+                        <span class="text-[10px] font-pixel uppercase tracking-widest">BREACH RECORDS</span>
+                        <span class="text-[10px] text-red-400 font-pixel animate-pulse">
+                            <?= esc($total_breach ?? 0) ?> SUMBER DITEMUKAN
+                        </span>
+                    </div>
+
+                    <div class="divide-y-2 divide-dashed divide-gray-200">
+                        <?php foreach ($details as $i => $detail): ?>
+                        <details class="group" <?= ($i === 0) ? 'open' : '' ?>>
+                            <summary class="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-gray-50 list-none">
+                                <div class="flex items-center gap-3">
+                                    <?php if (!empty($detail['is_verified'])): ?>
+                                        <span class="text-[9px] font-pixel bg-red-100 text-red-700 border border-red-400 px-1.5 py-0.5 shrink-0">VERIFIED</span>
+                                    <?php else: ?>
+                                        <span class="text-[9px] font-pixel bg-gray-100 text-gray-500 border border-gray-300 px-1.5 py-0.5 shrink-0">UNVERIFIED</span>
+                                    <?php endif; ?>
+                                    <span class="font-bold text-sm text-black"><?= esc($detail['sumber'] ?? '-') ?></span>
+                                    <span class="text-[10px] text-gray-400 hidden md:inline"><?= esc($detail['domain'] ?? '') ?></span>
+                                </div>
+                                <div class="flex items-center gap-4 shrink-0">
+                                    <span class="text-[10px] font-bold text-gray-500 hidden sm:block"><?= esc($detail['tanggal'] ?? '-') ?></span>
+                                    <svg class="w-4 h-4 text-gray-400 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </div>
+                            </summary>
+
+                            <div class="px-6 pb-5 bg-gray-50 border-t border-dashed border-gray-200">
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                                    <div>
+                                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Industri</p>
+                                        <p class="text-xs font-bold text-black mt-1"><?= esc($detail['industri'] ?? '-') ?></p>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Rekaman Bocor</p>
+                                        <p class="text-xs font-bold text-red-600 mt-1"><?= esc($detail['jumlah_data'] ?? '-') ?></p>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Risiko Password</p>
+                                        <p class="text-xs font-bold text-black mt-1"><?= esc($detail['risiko_password'] ?? '-') ?></p>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Tahun</p>
+                                        <p class="text-xs font-bold text-black mt-1"><?= esc($detail['tanggal'] ?? '-') ?></p>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4">
+                                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-2">Data yang Terekspos</p>
+                                    <div class="flex flex-wrap gap-1">
+                                        <?php
+                                        $kelasArr = explode(';', $detail['kelas_data'] ?? '');
+                                        foreach ($kelasArr as $kelas):
+                                            $kelas = trim($kelas);
+                                            if ($kelas === '') continue;
+                                        ?>
+                                        <span class="text-[10px] font-bold bg-black text-white px-2 py-0.5 border border-black"><?= esc($kelas) ?></span>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+
+                                <?php if (!empty($detail['deskripsi'])): ?>
+                                <div class="mt-4 border-t border-dashed border-gray-200 pt-3">
+                                    <p class="text-[10px] text-gray-500 leading-relaxed"><?= esc($detail['deskripsi']) ?></p>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                        </details>
+                        <?php endforeach; ?>
+                    </div>
+
+
+                    <div class="bg-gray-50 border-t-2 border-dashed border-gray-300 px-6 py-3">
+                        <p class="text-[10px] text-gray-400 font-bold uppercase">
+                            Sumber data: <a href="https://xposedornot.com" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">XposedOrNot.com</a> — Free Public API
+                        </p>
+                    </div>
                 </div>
                 <?php endif; ?>
+
+                <?php if ($status === 'safe'): ?>
+                <div class="border-[3px] border-green-600 shadow-[4px_4px_0px_rgba(22,163,74,1)] bg-green-50 p-6 mt-8 text-center">
+                    <p class="font-pixel text-green-700 text-sm">✓ ALL CLEAR</p>
+                    <p class="font-bold text-sm text-green-800 mt-2"><?= esc($api_message ?? 'Tidak ditemukan dalam database kebocoran yang diketahui.') ?></p>
+                </div>
+                <?php endif; ?>
+
+                <?php if ($status === 'error'): ?>
+                <div class="border-[3px] border-yellow-500 shadow-[4px_4px_0px_rgba(234,179,8,1)] bg-yellow-50 p-6 mt-8">
+                    <p class="font-pixel text-yellow-700 text-sm uppercase">[SYSTEM_ERROR]</p>
+                    <p class="font-bold text-sm text-yellow-800 mt-2"><?= esc($api_message ?? 'Terjadi kesalahan saat menghubungi layanan pengecekan.') ?></p>
+                    <p class="text-[10px] text-yellow-600 mt-2 uppercase font-bold">Silakan coba lagi dalam beberapa saat.</p>
+                </div>
+                <?php endif; ?>
+
             </div>
             <?php endif; ?>
 
             <hr class="border-t-[4px] border-dashed border-gray-400 my-16">
 
-            <!-- System Statistics Section -->
             <div id="statistik-section" class="space-y-6 scroll-mt-24">
                 <div class="flex items-center gap-2 mb-6">
                     <div class="w-3 h-3 bg-gray-400"></div>
@@ -278,7 +352,6 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Active Scans Box -->
                     <div class="border-[3px] border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] bg-white relative pt-8 flex flex-col justify-between h-28">
                         <div class="flex justify-between w-full absolute top-2 left-0 px-4">
                             <span class="text-[10px] text-gray-500 uppercase font-bold tracking-widest">ACTIVE SCANS</span>
@@ -291,7 +364,6 @@
                         <div class="text-[8px] text-gray-400 font-bold uppercase mt-1">LOAD: 45 / 100</div>
                     </div>
 
-                    <!-- Breach Rate Box -->
                     <div class="border-[4px] border-red-600 p-4 shadow-[4px_4px_0px_rgba(220,38,38,1)] bg-white relative pt-8 flex justify-between h-28">
                         <span class="absolute top-2 left-4 text-[10px] text-red-600 uppercase font-bold tracking-widest">BREACH RATE %</span>
                         <div class="font-pixel text-red-600 text-3xl self-center"><?= esc($statistik['tingkat_kebocoran'] ?? '65%') ?></div>
@@ -301,7 +373,6 @@
                         </div>
                     </div>
 
-                    <!-- Total Breached Box -->
                     <div class="border-[3px] border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] bg-white relative pt-8 flex flex-col justify-between h-28">
                         <span class="absolute top-2 left-4 text-[10px] text-gray-500 uppercase font-bold tracking-widest">TOTAL BREACHED</span>
                         <div class="font-pixel text-xl"><?= esc($statistik['total_akun'] ?? '352K') ?></div>
@@ -311,12 +382,10 @@
                     </div>
                 </div>
 
-                <!-- Chart Box -->
                 <div class="border-[3px] border-black shadow-[6px_6px_0px_rgba(0,0,0,1)] bg-white p-6 mt-8 relative pt-10">
                     <div class="absolute top-3 left-4 text-[10px] text-gray-500 uppercase font-bold tracking-widest">BREACH TRENDS / ANNUAL_DATA</div>
                     <div class="absolute top-3 right-4 text-[10px] text-blue-600 uppercase font-bold tracking-widest">LIVE_FEED: UPDATING...</div>
                     <div class="w-full h-64 mt-4 relative">
-                        <!-- Custom grid overlay -->
                         <div class="absolute inset-0 border-b-2 border-l-2 border-black flex flex-col justify-between pb-6 pl-1 text-[8px] text-gray-400 font-bold">
                             <div class="w-full border-b border-gray-200 border-dashed h-full"></div>
                             <div class="w-full border-b border-gray-200 border-dashed h-full"></div>
@@ -335,8 +404,7 @@
 
             <hr class="border-t-[4px] border-dashed border-gray-400 my-16">
 
-            <!-- About Section (Restyled) -->
-            <div id="tentang-section" class="scroll-mt-20 border-[4px] border-black p-8 bg-black text-white shadow-[8px_8px_0px_rgba(100,100,100,1)] mb-10">
+            <div id="tentang-section" class="scroll-mt-20 border-[4px] border-black p-8 bg-gray-600 text-white shadow-[8px_8px_0px_rgba(100,100,100,1)] mb-10">
                 <div class="flex items-center gap-2 mb-8">
                     <div class="w-3 h-3 bg-white"></div>
                     <h2 class="text-sm font-pixel text-white uppercase tracking-widest">ABOUT [SYSTEM_INFO]</h2>
@@ -360,7 +428,6 @@
                 <div class="pt-8">
                     <h3 class="text-sm font-bold text-white uppercase tracking-widest mb-6">> DEV_TEAM</h3>
                     <div class="space-y-6">
-                        <!-- Dev 1 -->
                         <div class="border-2 border-white p-4 flex flex-col md:flex-row items-center gap-6 bg-[#111]">
                             <div class="w-24 h-24 border-2 border-white bg-black flex-shrink-0 flex items-center justify-center p-1">
                                 <img src="<?= base_url('image/Yona.JPG') ?>" alt="Foto" class="w-full h-full object-cover filter grayscale contrast-125">
@@ -371,7 +438,6 @@
                                 <p class="text-gray-400 text-xs leading-relaxed">Arsitektur sistem MVC, database, dan security.</p>
                             </div>
                         </div>
-                        <!-- Dev 2 -->
                         <div class="border-2 border-white p-4 flex flex-col md:flex-row items-center gap-6 bg-[#111]">
                             <div class="w-24 h-24 border-2 border-white bg-black flex-shrink-0 flex items-center justify-center p-1">
                                 <img src="<?= base_url('image/Baraza.jpeg') ?>" alt="Foto" class="w-full h-full object-cover filter grayscale contrast-125">
@@ -382,7 +448,6 @@
                                 <p class="text-gray-400 text-xs leading-relaxed">Mendesain UI/UX visual dan komponen Tailwind CSS.</p>
                             </div>
                         </div>
-                        <!-- Dev 3 -->
                         <div class="border-2 border-white p-4 flex flex-col md:flex-row items-center gap-6 bg-[#111]">
                             <div class="w-24 h-24 border-2 border-white bg-black flex-shrink-0 flex items-center justify-center p-1">
                                 <img src="<?= base_url('image/Nanduy.jpeg') ?>" alt="Foto" class="w-full h-full object-cover filter grayscale contrast-125">
@@ -400,15 +465,10 @@
         </main>
         
         <footer class="border-t-4 border-black bg-white p-4 text-center text-xs font-bold uppercase text-gray-500">
-            [ PWNED_SYSTEM_v1.0 ] &copy; 2026 | TERMINAL_CLOSED
-        </footer>
+            [ PWNED_SYSTEM_v1.0 ] &copy; 2026 | TERMINAL_CLOS    </div>
 
-    </div>
-
-    <!-- Scripts -->
     <script>
         const ctx = document.getElementById('trenChart').getContext('2d');
-        // Custom styling for Chart.js to match 8-bit style roughly
         Chart.defaults.font.family = "'JetBrains Mono', monospace";
         Chart.defaults.color = '#9ca3af';
 
@@ -419,14 +479,14 @@
                 datasets: [{
                     label: 'Breach Vol',
                     data: [25, 48, 38, 52, 40, 58, 72, 62, 68, 79],
-                    borderColor: '#2563eb', // Blue-600
+                    borderColor: '#2563eb',
                     borderWidth: 4,
                     pointBackgroundColor: '#fff',
                     pointBorderColor: '#2563eb',
                     pointBorderWidth: 2,
                     pointRadius: 4,
                     pointHoverRadius: 6,
-                    tension: 0, // 0 tension makes lines straight, fitting retro theme
+                    tension: 0,
                     fill: false
                 }]
             },
@@ -442,7 +502,7 @@
                     y: { 
                         beginAtZero: true,
                         grid: { display: false, drawBorder: true, borderColor: '#000', borderWidth: 2 },
-                        ticks: { display: false } // We use custom grid overlay in HTML
+                        ticks: { display: false }
                     } 
                 }
             }
@@ -492,6 +552,11 @@
             setActiveLink(currentActive);
         });
     </script>
+
+<?= csrf_hash() ?>
+<?= csrf_field() ?>
+
+<?= base_url("cek-email-ajax") ?>
 
 </body>
 </html>

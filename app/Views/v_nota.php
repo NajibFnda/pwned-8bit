@@ -4,16 +4,13 @@
     <meta charset="UTF-8">
     <title>Nota Pembayaran - PWNED</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Library untuk Ubah HTML ke PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         .font-pixel { font-family: 'Press Start 2P', cursive; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
-        /* Style khusus untuk cetak */
         #area-struk {
             background-image: repeating-linear-gradient(0deg, transparent, transparent 19px, #e5e7eb 19px, #e5e7eb 20px);
             background-size: 100% 20px;
@@ -30,9 +27,7 @@
     </div>
 
     <div class="max-w-md w-full space-y-8">
-        <!-- AREA STRUK (Bagian ini yang akan dijadikan PDF) -->
         <div id="area-struk" class="bg-white p-8 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] relative">
-            <!-- Pinggiran kertas berlubang -->
             <div class="absolute -left-3 top-4 bottom-4 flex flex-col justify-between">
                 <div class="w-4 h-4 bg-slate-300 rounded-full border-2 border-black"></div>
                 <div class="w-4 h-4 bg-slate-300 rounded-full border-2 border-black"></div>
@@ -84,7 +79,6 @@
             </div>
         </div>
 
-        <!-- TOMBOL AKSI (Tidak ikut tercetak di PDF) -->
         <div class="flex gap-4 pt-4">
             <a href="<?= base_url('/') ?>" class="w-1/3 bg-gray-400 hover:bg-gray-500 border-4 border-black text-black text-center font-pixel text-[10px] py-4 uppercase shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-none">
                 < DASHBOARD
