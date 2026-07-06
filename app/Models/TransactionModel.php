@@ -14,7 +14,7 @@ class TransactionModel extends Model
     
     protected $returnType       = 'array';
     
-    protected $allowedFields    = ['user_id', 'paket', 'harga', 'tanggal'];
+    protected $allowedFields    = ['user_id', 'paket', 'mode', 'harga', 'tanggal'];
 
     
     public function getTransactionsWithUser()

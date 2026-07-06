@@ -53,7 +53,7 @@ class XonApiService
             'connect_timeout' => 5,            // Detik — batas waktu koneksi awal
             'allow_redirects' => false,        // Jangan ikuti redirect (SSRF prevention)
             'verify'          => false,        // XAMPP Windows default tidak punya cacert.pem. Set false untuk dev.
-            'http_errors'     => false,        // PENTING: Jangan lempar exception jika API me-return 404 (safe) atau 429
+            'http_errors'     => false,        // Jangan lempar exception jika API me-return 404 (safe) atau 429
             'headers'         => [
                 'Accept'     => 'application/json',
                 'User-Agent' => 'PWNED-PWL-CodeIgniter4/1.0',

@@ -74,6 +74,14 @@
 
             <div class="text-center text-xs font-bold text-black mt-8 uppercase tracking-widest space-y-2">
                 <p>STATUS: <span class="bg-black text-white px-2 py-1">PAID / LUNAS</span></p>
+                <div class="border-4 border-yellow-400 bg-yellow-50 px-4 py-3 mt-4 text-left shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+                    <p class="text-[9px] font-pixel text-yellow-800 uppercase tracking-widest leading-relaxed">
+                        [!] YOUR ACCOUNT WILL BE UPDATED SHORTLY
+                    </p>
+                    <p class="text-[9px] text-yellow-700 font-bold mt-2 normal-case tracking-normal">
+                        Paket baru Anda akan diaktifkan setelah dikonfirmasi oleh admin. Proses ini biasanya memakan waktu kurang dari 24 jam.
+                    </p>
+                </div>
                 <p class="pt-4 text-[10px]">THANK YOU FOR YOUR PURCHASE.</p>
                 <p class="text-[10px]">END OF TRANSMISSION.</p>
             </div>

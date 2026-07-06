@@ -18,7 +18,7 @@ class Home extends BaseController
         if ($session->get('logged_in')) {
             $user_id = $session->get('id');
             $paket = $session->get('subscription_plan');
-            $usage_limit = 5; 
+            $usage_limit = 5;
             
             if ($paket === 'plus') {
                 $usage_limit = 50;
@@ -138,7 +138,7 @@ class Home extends BaseController
             'usage_limit'  => $usage_limit,
             'statistik'    => [
                 'sumber_aktif'      => '48',
-                'tingkat_kebocoran' => 'Kritis',
+                'tingkat_kebocoran' => 'Critical',
                 'total_akun'        => '352K+',
             ],
         ];
@@ -187,12 +187,13 @@ class Home extends BaseController
             'tanggal' => date('Y-m-d H:i:s'),
         ]);
 
+        // Simpan sebagai pending — admin harus approve dulu sebelum plan aktif
         $userModel = new \App\Models\UserModel();
         $userModel->update($userId, [
-            'subscription_plan' => $paket,
-            'expire_date'       => $expire_date,
+            'pending_plan' => $paket,
         ]);
-        $session->set('subscription_plan', $paket);
+        // TIDAK update subscription_plan dan TIDAK update session di sini
+        // Plan baru aktif setelah admin approve
 
         return redirect()->to('/upgrade/nota/' . $id_transaksi);
     }

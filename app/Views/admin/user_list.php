@@ -52,15 +52,48 @@
                                 <div class="text-black uppercase tracking-widest"><?= esc($user['nama'] ?? 'User') ?></div>
                                 <div class="text-[10px] text-blue-600 uppercase mt-1"><?= esc($user['email']) ?></div>
                             </td>
+
+                            <!-- Kolom Langganan: tampilkan pending jika ada -->
                             <td class="px-6 py-4 border-r-4 border-black">
-                                <?php if ($user['subscription_plan'] == 'pro'): ?>
-                                    <span class="bg-red-600 text-white px-2 py-1 text-[10px] font-pixel border-2 border-black uppercase tracking-widest shadow-[2px_2px_0px_rgba(0,0,0,1)]">PRO</span>
-                                <?php elseif ($user['subscription_plan'] == 'plus'): ?>
-                                    <span class="bg-blue-600 text-white px-2 py-1 text-[10px] font-pixel border-2 border-black uppercase tracking-widest shadow-[2px_2px_0px_rgba(0,0,0,1)]">PLUS</span>
+                                <?php
+                                $planNow     = $user['subscription_plan'] ?? 'free';
+                                $planPending = $user['pending_plan'] ?? null;
+
+                                $badgeClass = [
+                                    'pro'  => 'bg-red-600 text-white',
+                                    'plus' => 'bg-blue-600 text-white',
+                                    'free' => 'bg-gray-300 text-black',
+                                ];
+                                ?>
+
+                                <?php if ($planPending && $planPending !== $planNow): ?>
+                                   
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="<?= $badgeClass[$planNow] ?? 'bg-gray-300 text-black' ?> px-2 py-1 text-[9px] font-pixel border-2 border-black uppercase shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+                                            <?= strtoupper($planNow) ?>
+                                        </span>
+                                        <span class="text-black font-pixel text-[9px]">&gt;&gt;</span>
+                                        <span class="<?= $badgeClass[$planPending] ?? 'bg-gray-300 text-black' ?> px-2 py-1 text-[9px] font-pixel border-2 border-black uppercase shadow-[2px_2px_0px_rgba(0,0,0,1)] ">
+                                            <?= strtoupper($planPending) ?>
+                                        </span>
+                                    </div>
+                                
+                                    <form method="POST" action="<?= base_url('admin/approve-plan/' . $user['id']) ?>" class="mt-2"
+                                          onsubmit="return confirm('Aktifkan plan <?= strtoupper($planPending) ?> untuk user ini?');">
+                                        <?= csrf_field() ?>
+                                        <button type="submit"
+                                            class="bg-green-600 hover:bg-green-800 text-white px-3 py-1 text-[8px] font-pixel uppercase border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-none">
+                                            [OK] APPROVE
+                                        </button>
+                                    </form>
                                 <?php else: ?>
-                                    <span class="bg-gray-300 text-black px-2 py-1 text-[10px] font-pixel border-2 border-black uppercase tracking-widest shadow-[2px_2px_0px_rgba(0,0,0,1)]">FREE</span>
+                                
+                                    <span class="<?= $badgeClass[$planNow] ?? 'bg-gray-300 text-black' ?> px-2 py-1 text-[10px] font-pixel border-2 border-black uppercase tracking-widest shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+                                        <?= strtoupper($planNow) ?>
+                                    </span>
                                 <?php endif; ?>
                             </td>
+
                             <td class="px-6 py-4 text-gray-600 border-r-4 border-black uppercase tracking-widest text-[10px]">
                                 <?= !empty($user['expire_date']) ? date('d M Y', strtotime($user['expire_date'])) : '<span class="text-gray-400">Selamanya</span>' ?>
                             </td>

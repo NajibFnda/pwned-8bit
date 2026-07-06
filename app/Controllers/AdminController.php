@@ -52,11 +52,51 @@ public function index()
 
         $this->userModel->update($id, [
             'subscription_plan' => $plan,
-            'expire_date' => $expire
+            'expire_date' => $expire,
+            'pending_plan' => null,  // hapus pending jika admin edit manual
         ]);
 
         return redirect()->to('/admin')->with('pesan', 'Status langganan berhasil diperbarui!');
     }
+
+    public function approvePendingPlan($id)
+    {
+        $session = session();
+        if ($session->get('role') !== 'admin') {
+            return redirect()->to('/')->with('error', 'Akses ditolak!');
+        }
+
+        $user = $this->userModel->find((int) $id);
+        if (!$user || empty($user['pending_plan'])) {
+            return redirect()->to('/admin')->with('pesan', 'Tidak ada pending plan untuk disetujui.');
+        }
+
+        $newPlan = $user['pending_plan'];
+
+        // Ambil transaksi terakhir user untuk menentukan mode (bulanan/tahunan)
+        $transactionModel = new \App\Models\TransactionModel();
+        $lastTrx = $transactionModel
+            ->where('user_id', (int) $id)
+            ->where('paket', $newPlan)
+            ->orderBy('tanggal', 'DESC')
+            ->first();
+
+        $mode = $lastTrx['mode'] ?? 'bulanan';
+        $expire_date = ($mode === 'tahunan')
+            ? date('Y-m-d', strtotime('+1 year'))
+            : date('Y-m-d', strtotime('+1 month'));
+
+        // Update plan aktif + hapus pending
+        $this->userModel->update((int) $id, [
+            'subscription_plan' => $newPlan,
+            'expire_date'       => $expire_date,
+            'pending_plan'      => null,
+        ]);
+
+        return redirect()->to('/admin')
+            ->with('pesan', 'Plan ' . strtoupper($newPlan) . ' berhasil diaktifkan untuk user #' . $id . '!');
+    }
+
 public function sales()
 {
     $session = session();

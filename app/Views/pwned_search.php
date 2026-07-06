@@ -3,7 +3,7 @@
 <head >
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PWNED - Cek Kebocoran Data Anda</title>
+    <title>PWNED - Check Your Data Breach</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Google Fonts -->
@@ -28,9 +28,10 @@
             
             <div id="nav-container" class=" hidden md:flex justify-center space-x-6 text-sm font-bold uppercase">
                 <a href="#" id="nav-home" class="nav-link text-black hover:bg-black hover:text-white px-2 py-1 transition-none">HOME</a>
-                <a href="#cek-section" id="nav-cek" class="nav-link text-black hover:bg-black hover:text-white px-2 py-1 transition-none">CEK EMAIL</a>
-                <a href="#statistik-section" id="nav-statistik" class="nav-link text-black hover:bg-black hover:text-white px-2 py-1 transition-none">STATISTIK</a>
-                <a href="#tentang-section" id="nav-tentang" class="nav-link text-black hover:bg-black hover:text-white px-2 py-1 transition-none">TENTANG</a>
+                <a href="#cek-section" id="nav-cek" class="nav-link text-black hover:bg-black hover:text-white px-2 py-1 transition-none">CHECK EMAIL</a>
+                <a href="#statistik-section" id="nav-statistik" class="nav-link text-black hover:bg-black hover:text-white px-2 py-1 transition-none">STATISTICS</a>
+                <a href="#tentang-section" id="nav-tentang" class="nav-link text-black hover:bg-black hover:text-white px-2 py-1 transition-none">ABOUT</a>
+    
                 <?php if(session()->get('role') === 'admin'): ?>
                 <a href="<?= base_url('admin') ?>" class="nav-link text-red-600 hover:bg-red-600 hover:text-white px-2 py-1 transition-none">
                     [ADMIN]
@@ -44,7 +45,7 @@
                         <span>
                             USER: <span class="text-blue-600"><?= esc(session()->get('nama') ?? 'User') ?></span>
                         </span>
-                        <a href="<?= base_url('logout') ?>" class="text-red-600 hover:bg-red-600 hover:text-white px-2 py-1 transition-none" title="Keluar Sistem">
+                        <a href="<?= base_url('logout') ?>" class="text-red-600 hover:bg-red-600 hover:text-white px-2 py-1 transition-none" title="Logout System">
                             LOGOUT
                         </a>
                     </div>
@@ -91,10 +92,10 @@
                         <span class="text-red-600 block mt-4 text-4xl md:text-6xl">PWNED?</span>
                     </h1>
                     <p class="text-gray-600 font-mono text-sm leading-relaxed font-bold">
-                        Cek apakah email Anda pernah terlibat dalam kebocoran data.
+                        Check if your email has ever been involved in a data breach.
                     </p>
                     <a href="#cek-section" class="inline-block bg-blue-600 hover:bg-blue-800 text-white font-pixel text-[10px] px-8 py-4 border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-none">
-                        CEK EMAIL SEKARANG
+                        CHECK EMAIL NOW
                     </a>
                 </div>
                 <div class="flex justify-center">
@@ -109,10 +110,10 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center p-8 border-4 border-black bg-white shadow-[6px_6px_0px_rgba(0,0,0,1)]">
                     <div class="space-y-4">
                         <h2 class="text-xl font-pixel text-black flex items-center gap-2">
-                            <span class="text-red-600">></span> APA ITU KEBOCORAN DATA?
+                            <span class="text-red-600">></span> WHAT IS A DATA BREACH?
                         </h2>
                         <p class="text-gray-600 font-mono text-sm leading-relaxed font-bold">
-                            Kebocoran data terjadi ketika informasi pribadi seperti email, password, dan data penting lainnya dicuri dan disebarkan di internet tanpa izin.
+                            A data breach occurs when personal information such as emails, passwords, and other sensitive data is stolen and distributed on the internet without permission.
                         </p>
                     </div>
                     <div class="flex justify-center">
@@ -125,33 +126,33 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="bg-white p-6 border-[3px] border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] text-center space-y-4 transition-transform hover:-translate-y-1">
                         <img src="<?= base_url('image/shield.png') ?>" alt="Shield" class="w-16 h-16 mx-auto object-contain">
-                        <h3 class="font-bold text-black uppercase tracking-widest text-sm">Lindungi Akun Anda</h3>
-                        <p class="text-gray-500 text-xs font-bold uppercase leading-relaxed">Mengetahui kebocoran lebih awal dapat membantu Anda mengamankan akun penting.</p>
+                        <h3 class="font-bold text-black uppercase tracking-widest text-sm">Protect Your Account</h3>
+                        <p class="text-gray-500 text-xs font-bold uppercase leading-relaxed">Knowing about a breach early can help you secure important accounts.</p>
                     </div>
                     <div class="bg-white p-6 border-[3px] border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] text-center space-y-4 transition-transform hover:-translate-y-1">
                         <img src="<?= base_url('image/Computer2.png') ?>" alt="Question" class="w-16 h-16 mx-auto object-contain">
-                        <h3 class="font-bold text-black uppercase tracking-widest text-sm">Cek dengan Mudah</h3>
-                        <p class="text-gray-500 text-xs font-bold uppercase leading-relaxed">Masukkan email Anda dan kami akan memeriksa ribuan data kebocoran.</p>
+                        <h3 class="font-bold text-black uppercase tracking-widest text-sm">Check Easily</h3>
+                        <p class="text-gray-500 text-xs font-bold uppercase leading-relaxed">Enter your email and we will check thousands of data breaches.</p>
                     </div>
                     <div class="bg-white p-6 border-[3px] border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] text-center space-y-4 transition-transform hover:-translate-y-1">
-                        <img src="<?= base_url('image/FloppyDisk.png') ?>" alt="Data Terpercaya" class="w-16 h-16 mx-auto object-contain">
-                        <h3 class="font-bold text-black uppercase tracking-widest text-sm">Data Terpercaya</h3>
-                        <p class="text-gray-500 text-xs font-bold uppercase leading-relaxed">Kami menggunakan sumber data kebocoran yang diperbarui secara berkala.</p>
+                        <img src="<?= base_url('image/FloppyDisk.png') ?>" alt="Trusted Data" class="w-16 h-16 mx-auto object-contain">
+                        <h3 class="font-bold text-black uppercase tracking-widest text-sm">Trusted Data</h3>
+                        <p class="text-gray-500 text-xs font-bold uppercase leading-relaxed">We use breach data sources that are regularly updated.</p>
                     </div>
                 </div>
 
                 <div class="bg-black text-white border-4 border-black shadow-[6px_6px_0px_rgba(100,100,100,1)] p-8 grid grid-cols-3 text-center gap-4">
                     <div class="border-r-2 border-dashed border-gray-600">
-                        <div class="text-2xl md:text-3xl font-pixel text-blue-400">352K+</div>
-                        <div class="text-[10px] text-gray-400 mt-2 uppercase font-bold tracking-widest">Akun Bocor Tahun Ini</div>
+                        <div class="text-2xl md:text-3xl font-pixel text-blue-400">24B+</div>
+                        <div class="text-[10px] text-gray-400 mt-2 uppercase font-bold tracking-widest">Accounts Breached This Year</div>
                     </div>
                     <div class="border-r-2 border-dashed border-gray-600">
                         <div class="text-2xl md:text-3xl font-pixel text-blue-400">48</div>
-                        <div class="text-[10px] text-gray-400 mt-2 uppercase font-bold tracking-widest">Sumber Kebocoran</div>
+                        <div class="text-[10px] text-gray-400 mt-2 uppercase font-bold tracking-widest">Breach Sources</div>
                     </div>
                     <div>
                         <div class="text-2xl md:text-3xl font-pixel text-blue-400">100%</div>
-                        <div class="text-[10px] text-gray-400 mt-2 uppercase font-bold tracking-widest">Gratis Digunakan</div>
+                        <div class="text-[10px] text-gray-400 mt-2 uppercase font-bold tracking-widest">Free to Use</div>
                     </div>
                 </div>
             </div>
@@ -159,8 +160,8 @@
 
             <div id="cek-section" class="text-center space-y-8 scroll-mt-24 border-t-[4px] border-dashed border-gray-400 pt-16 mt-16">
                 <div class="space-y-2">
-                    <h2 class="text-xl md:text-2xl font-pixel text-black">CEK EMAIL ANDA</h2>
-                    <p class="text-xs uppercase font-bold text-gray-500 tracking-widest">Masukkan email yang ingin Anda periksa.</p>
+                    <h2 class="text-xl md:text-2xl font-pixel text-black">CHECK YOUR EMAIL</h2>
+                    <p class="text-xs uppercase font-bold text-gray-500 tracking-widest">Enter the email you want to check.</p>
                 </div>
 
                 <form action="<?= base_url('cek-email') ?>#hasil-cek" method="POST" class="max-w-2xl mx-auto mt-8 flex flex-col items-center gap-4">
@@ -170,14 +171,14 @@
                             value="<?= esc($email ?? old('email', '')) ?>"
                             class="w-full px-4 py-3 bg-white text-black border-none focus:outline-none font-bold placeholder-gray-400">
                         <button type="submit" class="bg-blue-600 hover:bg-blue-800 text-white font-pixel text-[10px] px-8 py-4 border-l-[4px] border-black whitespace-nowrap transition-none flex-shrink-0">
-                            CEK SEKARANG
+                            CHECK NOW
                         </button>
                     </div>
                 </form>
 
                 <div class="flex flex-col items-center text-center mt-6 space-y-2">
                     <div class="text-[10px] text-gray-500 uppercase font-bold tracking-widest flex items-center justify-center gap-2 mb-2">
-                        <span>Sisa pengecekan hari ini:</span>
+                        <span>Remaining checks today:</span>
                         <?php 
                             $kuota_terpakai = $usage_count ?? 0;
                             $batas_kuota = $usage_limit ?? 5; 
@@ -186,7 +187,7 @@
                         <?php if ($paket === 'pro'): ?>
                             <span class="text-green-600 font-pixel">Unlimited +</span>
                         <?php else: ?>
-                            <span class="text-green-600 font-pixel"><?= esc($batas_kuota - $kuota_terpakai) ?> Kali +</span>
+                            <span class="text-green-600 font-pixel"><?= esc($batas_kuota - $kuota_terpakai) ?> Times +</span>
                         <?php endif; ?>
                     </div>
                     <?php if ($paket !== 'pro' && $kuota_terpakai >= $batas_kuota): ?>
@@ -247,7 +248,7 @@
                     <div class="bg-black text-white px-6 py-3 flex justify-between items-center">
                         <span class="text-[10px] font-pixel uppercase tracking-widest">BREACH RECORDS</span>
                         <span class="text-[10px] text-red-400 font-pixel animate-pulse">
-                            <?= esc($total_breach ?? 0) ?> SUMBER DITEMUKAN
+                            <?= esc($total_breach ?? 0) ?> SOURCES FOUND
                         </span>
                     </div>
 
@@ -275,25 +276,25 @@
                             <div class="px-6 pb-5 bg-gray-50 border-t border-dashed border-gray-200">
                                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                                     <div>
-                                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Industri</p>
+                                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Industry</p>
                                         <p class="text-xs font-bold text-black mt-1"><?= esc($detail['industri'] ?? '-') ?></p>
                                     </div>
                                     <div>
-                                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Rekaman Bocor</p>
+                                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Breached Records</p>
                                         <p class="text-xs font-bold text-red-600 mt-1"><?= esc($detail['jumlah_data'] ?? '-') ?></p>
                                     </div>
                                     <div>
-                                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Risiko Password</p>
+                                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Password Risk</p>
                                         <p class="text-xs font-bold text-black mt-1"><?= esc($detail['risiko_password'] ?? '-') ?></p>
                                     </div>
                                     <div>
-                                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Tahun</p>
+                                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Year</p>
                                         <p class="text-xs font-bold text-black mt-1"><?= esc($detail['tanggal'] ?? '-') ?></p>
                                     </div>
                                 </div>
 
                                 <div class="mt-4">
-                                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-2">Data yang Terekspos</p>
+                                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-2">Exposed Data</p>
                                     <div class="flex flex-wrap gap-1">
                                         <?php
                                         $kelasArr = explode(';', $detail['kelas_data'] ?? '');
@@ -319,7 +320,7 @@
 
                     <div class="bg-gray-50 border-t-2 border-dashed border-gray-300 px-6 py-3">
                         <p class="text-[10px] text-gray-400 font-bold uppercase">
-                            Sumber data: <a href="https://xposedornot.com" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">XposedOrNot.com</a> — Free Public API
+                            Data source: <a href="https://xposedornot.com" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">XposedOrNot.com</a> — Free Public API
                         </p>
                     </div>
                 </div>
@@ -328,15 +329,15 @@
                 <?php if ($status === 'safe'): ?>
                 <div class="border-[3px] border-green-600 shadow-[4px_4px_0px_rgba(22,163,74,1)] bg-green-50 p-6 mt-8 text-center">
                     <p class="font-pixel text-green-700 text-sm">✓ ALL CLEAR</p>
-                    <p class="font-bold text-sm text-green-800 mt-2"><?= esc($api_message ?? 'Tidak ditemukan dalam database kebocoran yang diketahui.') ?></p>
+                    <p class="font-bold text-sm text-green-800 mt-2"><?= esc($api_message ?? 'Not found in any known breach database.') ?></p>
                 </div>
                 <?php endif; ?>
 
                 <?php if ($status === 'error'): ?>
                 <div class="border-[3px] border-yellow-500 shadow-[4px_4px_0px_rgba(234,179,8,1)] bg-yellow-50 p-6 mt-8">
                     <p class="font-pixel text-yellow-700 text-sm uppercase">[SYSTEM_ERROR]</p>
-                    <p class="font-bold text-sm text-yellow-800 mt-2"><?= esc($api_message ?? 'Terjadi kesalahan saat menghubungi layanan pengecekan.') ?></p>
-                    <p class="text-[10px] text-yellow-600 mt-2 uppercase font-bold">Silakan coba lagi dalam beberapa saat.</p>
+                    <p class="font-bold text-sm text-yellow-800 mt-2"><?= esc($api_message ?? 'An error occurred while contacting the check service.') ?></p>
+                    <p class="text-[10px] text-yellow-600 mt-2 uppercase font-bold">Please try again in a few moments.</p>
                 </div>
                 <?php endif; ?>
 
@@ -355,7 +356,6 @@
                     <div class="border-[3px] border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] bg-white relative pt-8 flex flex-col justify-between h-28">
                         <div class="flex justify-between w-full absolute top-2 left-0 px-4">
                             <span class="text-[10px] text-gray-500 uppercase font-bold tracking-widest">ACTIVE SCANS</span>
-                            <span class="text-[10px] text-green-500 uppercase font-bold font-pixel">API</span>
                         </div>
                         <div class="font-pixel text-xl"><?= esc($statistik['sumber_aktif'] ?? '48') ?></div>
                         <div class="w-full bg-gray-200 border-2 border-black h-3 mt-2">
@@ -392,7 +392,6 @@
                             <div class="w-full border-b border-gray-200 border-dashed h-full"></div>
                             <div class="w-full border-b border-gray-200 border-dashed h-full"></div>
                             <div class="w-full border-b border-gray-200 border-dashed h-full"></div>
-                            <div class="absolute bottom-0 left-2">Y_AXIS: BREACH_VOLUME (M)</div>
                         </div>
                         <canvas id="trenChart" class="relative z-10 pl-6 pb-6 w-full h-full"></canvas>
                     </div>
@@ -414,13 +413,13 @@
                     <div class="space-y-4">
                         <h3 class="text-sm font-bold text-blue-400 uppercase tracking-widest">> What is this?</h3>
                         <p class="text-gray-300 text-xs leading-relaxed text-justify font-mono">
-                            Periksa Data hadir untuk memberikan solusi kepada publik agar dapat secara berkala memeriksa apakah data kredensialnya turut menjadi korban kebocoran data. Sebagian besar data terekspos berasal dari insiden pelanggaran keamanan massal.
+                            PWNED is here to provide a solution for the public to regularly check if their credential data has become a victim of a data breach. Most exposed data comes from mass security breach incidents.
                         </p>
                     </div>
                     <div class="space-y-4">
                         <h3 class="text-sm font-bold text-blue-400 uppercase tracking-widest">> Why build this?</h3>
                         <p class="text-gray-300 text-xs leading-relaxed text-justify font-mono">
-                            Situs ini dibangun dengan dua tujuan utama. Pertama, mengedukasi masyarakat mengenai skala bahaya serangan cyber. Kedua, proyek pengembangan perangkat lunak berbasis CodeIgniter 4 ini menjadi sarana studi kasus praktis keamanan web.
+                            This site was built with two main goals. First, to educate the public about the scale of cyber attack dangers. Second, this CodeIgniter 4 based software development project serves as a practical web security case study.
                         </p>
                     </div>
                 </div>
@@ -433,9 +432,9 @@
                                 <img src="<?= base_url('image/Yona.JPG') ?>" alt="Foto" class="w-full h-full object-cover filter grayscale contrast-125">
                             </div>
                             <div class="space-y-2 text-center md:text-left">
-                                <h4 class="text-sm font-bold text-white uppercase">Yonazahran Yoga</h4>
+                                <h4 class="text-sm font-bold text-white uppercase">Yonazahran Yoga Meinindra Rizky</h4>
                                 <p class="text-[10px] text-blue-400 font-pixel">LEAD / BACKEND</p>
-                                <p class="text-gray-400 text-xs leading-relaxed">Arsitektur sistem MVC, database, dan security.</p>
+                                <p class="text-gray-400 text-xs leading-relaxed">MVC system architecture, database, and security.</p>
                             </div>
                         </div>
                         <div class="border-2 border-white p-4 flex flex-col md:flex-row items-center gap-6 bg-[#111]">
@@ -445,7 +444,7 @@
                             <div class="space-y-2 text-center md:text-left">
                                 <h4 class="text-sm font-bold text-white uppercase">Baraza Nandian Syah</h4>
                                 <p class="text-[10px] text-blue-400 font-pixel">UI/UX / FRONTEND</p>
-                                <p class="text-gray-400 text-xs leading-relaxed">Mendesain UI/UX visual dan komponen Tailwind CSS.</p>
+                                <p class="text-gray-400 text-xs leading-relaxed">Designing visual UI/UX and Tailwind CSS components.</p>
                             </div>
                         </div>
                         <div class="border-2 border-white p-4 flex flex-col md:flex-row items-center gap-6 bg-[#111]">
@@ -453,9 +452,9 @@
                                 <img src="<?= base_url('image/Nanduy.jpeg') ?>" alt="Foto" class="w-full h-full object-cover filter grayscale contrast-125">
                             </div>
                             <div class="space-y-2 text-center md:text-left">
-                                <h4 class="text-sm font-bold text-white uppercase">Muhammad Najib</h4>
+                                <h4 class="text-sm font-bold text-white uppercase">Muhammad Najib Finanda</h4>
                                 <p class="text-[10px] text-blue-400 font-pixel">UI/UX / FULLSTACK</p>
-                                <p class="text-gray-400 text-xs leading-relaxed">Keamanan CSRF, validasi, dan desain antarmuka.</p>
+                                <p class="text-gray-400 text-xs leading-relaxed">CSRF security, validation, and interface design.</p>
                             </div>
                         </div>
                     </div>
@@ -560,3 +559,115 @@
 
 </body>
 </html>
+
+
+<div id="contactModal" class="fixed inset-0 z-[999] hidden items-center justify-center p-4" style="background:rgba(0,0,0,0.85)">
+    <div class="bg-white border-[6px] border-black w-full max-w-lg shadow-[16px_16px_0px_rgba(0,0,0,0.5)] flex flex-col" style="max-height:90vh;overflow-y:auto">
+
+        <div class="bg-blue-600 border-b-[6px] border-black px-4 py-3 flex items-center justify-between flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="flex gap-1">
+                    <div class="w-3 h-3 bg-red-500 border-2 border-black"></div>
+                    <div class="w-3 h-3 bg-yellow-400 border-2 border-black"></div>
+                    <div class="w-3 h-3 bg-green-500 border-2 border-black"></div>
+                </div>
+                <span class="font-pixel text-[10px] text-white uppercase tracking-widest">CONTACT_ADMIN.EXE</span>
+            </div>
+            <button onclick="closeContactModal()" class="w-7 h-7 bg-red-500 border-2 border-black text-white font-bold hover:bg-red-700 flex items-center justify-center text-sm">✕</button>
+        </div>
+
+        <!-- Body: Form -->
+        <div id="contactFormBody" class="p-6 space-y-5 bg-gray-50">
+            <div class="border-l-4 border-blue-600 pl-3 mb-2">
+                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">&gt; Kirim pesan atau permintaan ke admin. Kami akan segera merespons.</p>
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">&gt; Nama</label>
+                <input type="text" id="contact_nama" placeholder="Nama kamu..."
+                    class="w-full px-4 py-3 bg-white border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] outline-none font-bold text-black placeholder-gray-400 text-sm">
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">&gt; Email</label>
+                <input type="email" id="contact_email" placeholder="email@kamu.com"
+                    class="w-full px-4 py-3 bg-white border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] outline-none font-bold text-black placeholder-gray-400 text-sm">
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">&gt; Jenis Permintaan</label>
+                <div class="relative border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] bg-white">
+                    <select id="contact_jenis" class="w-full px-4 py-3 bg-transparent outline-none font-bold text-black uppercase cursor-pointer appearance-none text-sm">
+                        <option value="upgrade_plus">Upgrade ke PLUS</option>
+                        <option value="upgrade_pro">Upgrade ke PRO</option>
+                        <option value="downgrade_free">Downgrade ke FREE</option>
+                        <option value="report">Laporkan Masalah</option>
+                        <option value="other">Lainnya</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-black border-l-4 border-black">▼</div>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">&gt; Pesan</label>
+                <textarea id="contact_pesan" rows="4" placeholder="Tuliskan pesan atau alasanmu di sini..."
+                    class="w-full px-4 py-3 bg-white border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] outline-none font-bold text-black placeholder-gray-400 text-sm resize-none"></textarea>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button onclick="closeContactModal()" class="w-1/3 bg-gray-300 hover:bg-gray-400 border-4 border-black text-black font-pixel text-[9px] py-4 uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-none">
+                    BATAL
+                </button>
+                <button onclick="submitContact()" class="w-2/3 bg-black hover:bg-blue-700 border-4 border-black text-white font-pixel text-[9px] py-4 uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-none">
+                    KIRIM &gt;&gt; ADMIN
+                </button>
+            </div>
+        </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    function openContactModal() {
+        document.getElementById('contactModal').classList.remove('hidden');
+        document.getElementById('contactModal').classList.add('flex');
+        document.getElementById('contactFormBody').classList.remove('hidden');
+        document.getElementById('contactSuccessBody').classList.add('hidden');
+
+        document.getElementById('contact_nama').value = '';
+        document.getElementById('contact_email').value = '';
+        document.getElementById('contact_pesan').value = '';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeContactModal() {
+        document.getElementById('contactModal').classList.add('hidden');
+        document.getElementById('contactModal').classList.remove('flex');
+        document.body.style.overflow = '';
+    }
+
+    function submitContact() {
+        const nama  = document.getElementById('contact_nama').value.trim();
+        const email = document.getElementById('contact_email').value.trim();
+        const pesan = document.getElementById('contact_pesan').value.trim();
+
+        if (!nama || !email) {
+            alert('Nama dan Email wajib diisi.');
+            return;
+        }
+
+        const btn = event.target;
+        btn.textContent = 'MENGIRIM...';
+        btn.disabled = true;
+
+        setTimeout(() => {
+            document.getElementById('contactFormBody').classList.add('hidden');
+            document.getElementById('contactSuccessBody').classList.remove('hidden');
+        }, 1200);
+    }
+
+    document.getElementById('contactModal').addEventListener('click', function(e) {
+        if (e.target === this) closeContactModal();
+    });
+</script>

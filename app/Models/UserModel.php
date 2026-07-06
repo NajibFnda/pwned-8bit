@@ -15,6 +15,7 @@ class UserModel extends Model
         'password', 
         'role', 
         'subscription_plan', 
-        'expire_date'
+        'expire_date',
+        'pending_plan'
     ];
 }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upgrade Premium - PWNED</title>
+    <title>Premium Upgrade - PWNED</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,7 +23,7 @@
             </div>
             
             <div id="nav-container" class="flex justify-center space-x-6 text-sm font-bold uppercase">
-                <a href="<?= base_url('/') ?>" class="nav-link text-black hover:bg-black hover:text-white px-2 py-1 transition-none">< KEMBALI KE HOME</a>
+                <a href="<?= base_url('/') ?>" class="nav-link text-black hover:bg-black hover:text-white px-2 py-1 transition-none">< BACK TO HOME</a>
             </div>
             
             <div class="flex justify-end items-center gap-4 font-bold uppercase text-sm">
@@ -49,15 +49,15 @@
                     UPGRADE SYSTEM ACCESS
                 </h1>
                 <p class="text-xs uppercase font-bold text-gray-500 tracking-widest max-w-xl mx-auto border-y-2 border-dashed border-gray-400 py-4">
-                    Pilih paket lisensi yang sesuai dengan kebutuhan pengawasan data Anda. Pembatalan dapat dilakukan kapan saja melalui terminal admin.
+                    Choose the license plan that suits your data monitoring needs. Cancellation can be done anytime via the admin terminal.
                 </p>
                 
                 <div class="inline-flex items-center bg-gray-100 p-1 border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] mt-4">
-                    <button id="btn-bulanan" class="px-6 py-2 text-xs font-pixel bg-black text-white transition-none uppercase">1 BULAN</button>
-                    <button id="btn-tahunan" class="px-6 py-2 text-xs font-pixel text-black hover:bg-gray-300 transition-none uppercase">1 TAHUN</button>
+                    <button id="btn-bulanan" class="px-6 py-2 text-xs font-pixel bg-black text-white transition-none uppercase">1 MONTH</button>
+                    <button id="btn-tahunan" class="px-6 py-2 text-xs font-pixel text-black hover:bg-gray-300 transition-none uppercase">1 YEAR</button>
                 </div>
                 <div class="text-[10px] text-green-600 font-bold tracking-widest mt-2 uppercase animate-pulse">
-                    > HEMAT 16% UNTUK LISENSI TAHUNAN <
+                    > SAVE 16% ON ANNUAL LICENSE <
                 </div>
             </div>
 
@@ -71,13 +71,13 @@
                     <div class="space-y-6">
                         <div class="border-b-4 border-dashed border-gray-400 pb-4">
                             <h3 class="text-xl font-pixel text-black uppercase">PWNED PLUS</h3>
-                            <p class="text-[10px] text-gray-500 mt-2 font-bold uppercase tracking-widest">Akses standar pengawasan</p>
+                            <p class="text-[10px] text-gray-500 mt-2 font-bold uppercase tracking-widest">Standard monitoring access</p>
                         </div>
                         
                         <div class="py-2">
                             <span id="price-plus" class="text-3xl font-pixel text-blue-600">Rp25K</span>
-                            <span class="text-gray-400 text-xs font-bold uppercase">/bln</span>
-                            <div id="note-plus" class="text-[10px] text-gray-400 mt-2 font-bold uppercase hidden">> DITAGIH Rp252K/THN</div>
+                            <span class="text-gray-400 text-xs font-bold uppercase">/mo</span>
+                            <div id="note-plus" class="text-[10px] text-gray-400 mt-2 font-bold uppercase hidden">> BILLED Rp252K/YR</div>
                         </div>
 
                         <div class="space-y-4 pt-2">
@@ -85,7 +85,7 @@
                             <ul class="space-y-3 text-xs text-black font-bold uppercase">
                                 <li class="flex items-start gap-2">
                                     <span class="text-blue-600">[+]</span>
-                                    <span>KUOTA 50 CEK EMAIL / HARI</span>
+                                    <span>QUOTA 50 EMAIL CHECKS / DAY</span>
                                 </li>
                                 <li class="flex items-start gap-2">
                                     <span class="text-blue-600">[+]</span>
@@ -98,7 +98,7 @@
                     <div class="pt-8">
                         <?php if(session()->get('subscription_plan') === 'plus'): ?>
                             <button disabled class="block text-center w-full bg-gray-200 text-gray-500 py-3 border-4 border-gray-400 text-xs font-bold uppercase cursor-not-allowed">
-                                LISENSI AKTIF
+                                ACTIVE LICENSE
                             </button>
                         <?php else: ?>
                             <button onclick="bukaModalPembayaran('plus')" class="block text-center w-full bg-blue-600 hover:bg-blue-800 text-white py-3 border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] text-[10px] font-pixel uppercase transition-none">
@@ -113,13 +113,13 @@
                     <div class="space-y-6">
                         <div class="border-b-4 border-dashed border-gray-600 pb-4">
                             <h3 class="text-xl font-pixel text-red-500 uppercase">PWNED PRO</h3>
-                            <p class="text-[10px] text-gray-400 mt-2 font-bold uppercase tracking-widest">Akses intelijen tak terbatas</p>
+                            <p class="text-[10px] text-gray-400 mt-2 font-bold uppercase tracking-widest">Unlimited intelligence access</p>
                         </div>
                         
                         <div class="py-2">
                             <span id="price-pro" class="text-3xl font-pixel text-red-500">Rp50K</span>
-                            <span class="text-gray-500 text-xs font-bold uppercase">/bln</span>
-                            <div id="note-pro" class="text-[10px] text-gray-500 mt-2 font-bold uppercase hidden">> DITAGIH Rp500K/THN</div>
+                            <span class="text-gray-500 text-xs font-bold uppercase">/mo</span>
+                            <div id="note-pro" class="text-[10px] text-gray-500 mt-2 font-bold uppercase hidden">> BILLED Rp500K/YR</div>
                         </div>
 
                         <div class="space-y-4 pt-2">
@@ -144,7 +144,7 @@
                     <div class="pt-8">
                         <?php if(session()->get('subscription_plan') === 'pro'): ?>
                             <button disabled class="block text-center w-full bg-[#333] text-gray-500 py-3 border-4 border-gray-600 text-xs font-bold uppercase cursor-not-allowed">
-                                LISENSI AKTIF
+                                ACTIVE LICENSE
                             </button>
                         <?php else: ?>
                             <button onclick="bukaModalPembayaran('pro')" class="block text-center w-full bg-red-600 hover:bg-red-800 text-white py-3 border-4 border-white shadow-[4px_4px_0px_rgba(255,255,255,1)] text-[10px] font-pixel uppercase transition-none">
@@ -210,7 +210,7 @@
                 <div class="border-4 border-black p-4 mb-6 flex justify-between items-center bg-gray-100">
                     <div>
                         <span class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest">> INVOICE_ID</span>
-                        <span id="modal-paket-nama" class="font-pixel text-xs text-black mt-2 block">PAKET</span>
+                        <span id="modal-paket-nama" class="font-pixel text-xs text-black mt-2 block">PLAN</span>
                     </div>
                     <div class="text-right">
                         <span class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest">> AMOUNT</span>
@@ -223,7 +223,7 @@
                         QRIS
                     </button>
                     <button onclick="pilihMetode('bank')" id="btn-bank" class="metode-btn py-3 bg-gray-400 hover:bg-gray-200 text-black text-xs font-bold uppercase transition-none">
-                        BANK TRF
+                        BANK TFR
                     </button>
                 </div>
 
