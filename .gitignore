@@ -126,3 +126,7 @@ _modules/*
 
 /results/
 /phpunit*.xml
+vendor.zip
+test_api.php
+test_api2.php
+test_midtrans.php

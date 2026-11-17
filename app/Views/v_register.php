@@ -24,24 +24,30 @@
 
     <div class="bg-white p-8 border-4 border-black w-full max-w-md shadow-[8px_8px_0px_rgba(255,255,255,1)]">
         
+        <?php if (session()->getFlashdata('error')): ?>
+            <div class="bg-red-600 border-2 border-black text-white px-4 py-3 shadow-[4px_4px_0px_rgba(0,0,0,1)] mb-6 text-xs text-center font-bold uppercase">
+                [!] <?= esc(session()->getFlashdata('error')) ?>
+            </div>
+        <?php endif; ?>
+
         <form action="<?= base_url('auth/saveRegister') ?>" method="POST" class="space-y-5">
             <?= csrf_field() ?>
 
             <div>
                 <label for="nama" class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">> FULL NAME</label>
-                <input type="text" id="nama" name="nama" required placeholder="Full Name"
+                <input type="text" id="nama" name="nama" required value="<?= esc(old('nama')) ?>" placeholder="Full Name"
                     class="w-full px-4 py-3 bg-white text-black border-2 border-black focus:outline-none focus:bg-gray-100 font-bold placeholder-gray-400">
             </div>
 
             <div>
                 <label for="email" class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">> EMAIL ADDRESS</label>
-                <input type="email" id="email" name="email" required placeholder="contoh@email.com"
+                <input type="email" id="email" name="email" required value="<?= esc(old('email')) ?>" placeholder="contoh@email.com"
                     class="w-full px-4 py-3 bg-white text-black border-2 border-black focus:outline-none focus:bg-gray-100 font-bold placeholder-gray-400">
             </div>
 
             <div>
                 <label for="password" class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">> PASSWORD</label>
-                <input type="password" id="password" name="password" required placeholder="Min 6 characters"
+                <input type="password" id="password" name="password" required minlength="6" placeholder="Min 6 characters"
                     class="w-full px-4 py-3 bg-white text-black border-2 border-black focus:outline-none focus:bg-gray-100 font-bold placeholder-gray-400">
             </div>
 

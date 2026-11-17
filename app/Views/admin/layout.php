@@ -21,7 +21,20 @@
 </head>
 <body class="bg-[url('<?= base_url('image/background_retro.png') ?>')] bg-repeat font-sans">
 
-    <aside class="w-64 fixed top-0 left-0 h-screen bg-white border-r-4 border-black flex flex-col z-40">
+    <!-- Mobile Topbar -->
+    <div class="md:hidden sticky top-0 z-30 bg-blue-600 text-white border-b-4 border-black px-4 py-3 flex items-center justify-between">
+        <div>
+            <span class="text-base font-pixel tracking-wider">PWNED</span>
+            <span class="text-[9px] ml-2 uppercase font-bold tracking-widest">[ADMIN]</span>
+        </div>
+        <button type="button" onclick="toggleAdminSidebar()" class="bg-black text-white font-pixel text-[9px] px-3 py-2 border-2 border-white uppercase">
+            MENU
+        </button>
+    </div>
+
+    <div id="admin-sidebar-backdrop" onclick="toggleAdminSidebar()" class="fixed inset-0 bg-black/60 z-30 hidden md:hidden"></div>
+
+    <aside id="admin-sidebar" class="w-64 fixed top-0 left-0 h-screen bg-white border-r-4 border-black flex flex-col z-40 -translate-x-full md:translate-x-0 transition-transform duration-200">
 
         <div class="flex-shrink-0 px-6 py-5 border-b-4 border-black bg-blue-600 text-white">
             <span class="text-xl font-pixel tracking-wider">PWNED</span>
@@ -44,6 +57,14 @@
                 <span>[S]</span> SALES
             </a>
 
+            <!-- REQUESTS -->
+            <a href="<?= base_url('admin/requests') ?>"
+               class="flex items-center justify-between gap-2 px-4 py-3 border-4 transition-none shadow-[4px_4px_0px_rgba(0,0,0,1)]
+                      <?= ($active ?? '') === 'requests' ? 'bg-black text-white border-black' : 'bg-white border-black text-black hover:bg-gray-200' ?>">
+                <span class="flex items-center gap-3"><span>[R]</span> REQUESTS</span>
+                <span id="notif-badge" class="hidden bg-red-600 text-white font-pixel text-[8px] px-1.5 py-0.5 border border-black">0</span>
+            </a>
+
         </nav>
 
         <div class="flex-shrink-0 px-4 py-6 border-t-4 border-black space-y-4 font-bold uppercase text-xs bg-white">
@@ -58,11 +79,20 @@
         </div>
     </aside>
 
-    <main class="ml-64 p-8 min-h-screen">
+    <main class="md:ml-64 p-4 sm:p-6 md:p-8 min-h-screen">
         <?= $this->renderSection('content') ?>
     </main>
 
     <script>
+        function toggleAdminSidebar() {
+            const sb = document.getElementById('admin-sidebar');
+            const bd = document.getElementById('admin-sidebar-backdrop');
+            if (sb && bd) {
+                sb.classList.toggle('-translate-x-full');
+                bd.classList.toggle('hidden');
+            }
+        }
+
         // Polling badge notifikasi pending setiap 30 detik
         const notifBadge = document.getElementById('notif-badge');
 

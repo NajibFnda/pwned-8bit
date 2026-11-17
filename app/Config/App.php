@@ -199,4 +199,15 @@ class App extends BaseConfig
      * @see http://www.w3.org/TR/CSP/
      */
     public bool $CSPEnabled = false;
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        $railwayDomain = getenv('RAILWAY_PUBLIC_DOMAIN') ?: ($_SERVER['RAILWAY_PUBLIC_DOMAIN'] ?? '');
+        if ($railwayDomain !== '' && empty(getenv('app.baseURL'))) {
+            $this->baseURL  = 'https://' . rtrim($railwayDomain, '/') . '/';
+            $this->proxyIPs = ['0.0.0.0/0' => 'X-Forwarded-For'];
+        }
+    }
 }

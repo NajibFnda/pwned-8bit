@@ -1,0 +1,11 @@
+.git
+.env
+vendor/
+vendor.zip
+writable/cache/*
+writable/logs/*
+writable/session/*
+writable/debugbar/*
+test_api.php
+test_api2.php
+test_midtrans.php

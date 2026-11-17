@@ -16,4 +16,14 @@ class SearchHistoryModel extends Model
                     ->where('DATE(created_at)', date('Y-m-d'))
                     ->countAllResults();
     }
+
+    public function getRecentUniqueEmails(int $userId, int $limit = 5): array
+    {
+        return $this->select('email_checked, MAX(created_at) as last_checked')
+                    ->where('user_id', $userId)
+                    ->groupBy('email_checked')
+                    ->orderBy('last_checked', 'DESC')
+                    ->limit($limit)
+                    ->findAll();
+    }
 }

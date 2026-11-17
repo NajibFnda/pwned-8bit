@@ -47,12 +47,17 @@ class XonApiService
             '/'
         );
 
+        $sslVerify = filter_var(
+            env('XON_SSL_VERIFY', env('CI_ENVIRONMENT') === 'production'),
+            FILTER_VALIDATE_BOOLEAN
+        );
+
         $this->client = Services::curlrequest([
             'baseURI'         => $this->baseUrl,
             'timeout'         => 10,           // Detik — mencegah request hang
             'connect_timeout' => 5,            // Detik — batas waktu koneksi awal
             'allow_redirects' => false,        // Jangan ikuti redirect (SSRF prevention)
-            'verify'          => false,        // XAMPP Windows default tidak punya cacert.pem. Set false untuk dev.
+            'verify'          => $sslVerify,   // Otomatis true di production, false di XAMPP Windows dev
             'http_errors'     => false,        // Jangan lempar exception jika API me-return 404 (safe) atau 429
             'headers'         => [
                 'Accept'     => 'application/json',
@@ -124,6 +129,63 @@ class XonApiService
                 'http_code'    => 500,
             ];
         }
+    }
+
+    /**
+     * Ambil metrik kebocoran data global secara real-time dari XposedOrNot API
+     * (/v1/metrics/detailed) dengan caching server-side dan fallback aman.
+     *
+     * @param  bool $forceRefresh Lewati cache singkat jika diminta secara internal.
+     * @return array
+     */
+    public function getGlobalMetrics(bool $forceRefresh = false): array
+    {
+        $cache        = Services::cache();
+        $cacheKey     = 'xon_global_metrics_v1';
+        $backupKey    = 'xon_global_metrics_backup_v1';
+        $cacheTtl     = 600;   // 10 menit — jaga kuota rate limit gratis XON
+        $backupTtl    = 86400; // 24 jam — fallback jika API timeout / 429
+
+        if (!$forceRefresh) {
+            $cached = $cache->get($cacheKey);
+            if (is_array($cached) && !empty($cached['chart']['values'])) {
+                $cached['source'] = 'cache';
+                return $cached;
+            }
+        }
+
+        try {
+            $fullUrl    = $this->baseUrl . '/metrics/detailed';
+            $response   = $this->client->get($fullUrl);
+            $statusCode = $response->getStatusCode();
+
+            if ($statusCode === 200) {
+                $raw = json_decode($response->getBody(), true);
+                if (
+                    json_last_error() === JSON_ERROR_NONE
+                    && is_array($raw)
+                    && !empty($raw['Yearly_Breaches_Count'])
+                    && is_array($raw['Yearly_Breaches_Count'])
+                ) {
+                    $payload = $this->buildGlobalMetricsPayload($raw, 'live', date('Y-m-d H:i:s'));
+                    $cache->save($cacheKey, $payload, $cacheTtl);
+                    $cache->save($backupKey, $payload, $backupTtl);
+                    return $payload;
+                }
+            }
+
+            log_message('warning', "[XonApiService] Gagal memuat /metrics/detailed, HTTP Status: {$statusCode}.");
+        } catch (\Throwable $e) {
+            log_message('error', '[XonApiService] Error saat mengambil global metrics: ' . $e->getMessage());
+        }
+
+        $backup = $cache->get($backupKey);
+        if (is_array($backup) && !empty($backup['chart']['values'])) {
+            $backup['source'] = 'backup_cache';
+            return $backup;
+        }
+
+        return $this->buildGlobalMetricsPayload($this->getBaselineMetricsSnapshot(), 'fallback', date('Y-m-d H:i:s'));
     }
 
     // =========================================================================
@@ -280,8 +342,142 @@ class XonApiService
     }
 
     // =========================================================================
+    // GLOBAL METRICS HELPERS
+    // =========================================================================
+
+    /**
+     * Normalisasi payload mentah dari /v1/metrics/detailed menjadi struktur
+     * siap pakai untuk kartu statistik dan grafik tren tahunan.
+     *
+     * @param  array  $raw      Data JSON yang sudah di-decode.
+     * @param  string $source   Asal data ('live' | 'cache' | 'backup_cache' | 'fallback').
+     * @param  string $syncedAt Waktu sinkronisasi server (Y-m-d H:i:s).
+     * @return array
+     */
+    private function buildGlobalMetricsPayload(array $raw, string $source, string $syncedAt): array
+    {
+        $yearlyRaw = $raw['Yearly_Breaches_Count'] ?? [];
+        $yearly    = [];
+        foreach ($yearlyRaw as $year => $count) {
+            if (preg_match('/^\d{4}$/', (string) $year) && is_numeric($count)) {
+                $yearly[(string) $year] = (int) $count;
+            }
+        }
+        ksort($yearly, SORT_STRING);
+
+        // Ambil 10 tahun terakhir agar sumbu X tetap ringkas ('17'..'26')
+        $recentYearly = array_slice($yearly, -10, 10, true);
+
+        $fullYears = array_keys($recentYearly);
+        $labels    = array_map(static fn(string $y): string => substr($y, -2), $fullYears);
+        $values    = array_values($recentYearly);
+
+        $countValues = count($values);
+        $average     = $countValues > 0 ? round(array_sum($values) / $countValues, 1) : 0.0;
+
+        $currentYear      = $countValues > 0 ? $fullYears[$countValues - 1] : date('Y');
+        $currentYearCount = $countValues > 0 ? $values[$countValues - 1] : 0;
+        $prevYearCount    = $countValues > 1 ? $values[$countValues - 2] : 0;
+
+        $yoyDiff = $prevYearCount > 0
+            ? round((($currentYearCount - $prevYearCount) / $prevYearCount) * 100, 1)
+            : 0.0;
+        $yoyFormatted = ($yoyDiff >= 0 ? '+' : '') . $yoyDiff . '%';
+
+        $vsAvgDiff = $average > 0
+            ? round((($currentYearCount - $average) / $average) * 100, 1)
+            : 0.0;
+        $vsAvgFormatted = ($vsAvgDiff >= 0 ? '+' : '') . $vsAvgDiff . '%';
+
+        $trendLevel = match (true) {
+            $average > 0 && $currentYearCount >= ($average * 1.25) => 'CRITICAL',
+            $average > 0 && $currentYearCount >= $average          => 'ELEVATED',
+            default                                                => 'MODERATE',
+        };
+        $trendDirection = $currentYearCount >= $prevYearCount ? 'INCREASING' : 'DECREASING';
+
+        $breachesCount  = is_numeric($raw['Breaches_Count'] ?? null) ? (int) $raw['Breaches_Count'] : 0;
+        $breachesRecs   = is_numeric($raw['Breaches_Records'] ?? null) ? (int) $raw['Breaches_Records'] : 0;
+        $pastesRecs     = is_numeric($raw['Pastes_Records'] ?? null) ? (int) $raw['Pastes_Records'] : 0;
+        $lastBreachIso  = is_string($raw['Last_Breach_Added'] ?? null) ? $raw['Last_Breach_Added'] : '';
+        $lastBreachTs   = $lastBreachIso !== '' ? strtotime($lastBreachIso) : false;
+        $lastBreachDate = $lastBreachTs !== false ? strtoupper(date('d M Y', $lastBreachTs)) : '-';
+
+        // Persentase load relatif terhadap puncak tahunan 10 tahun terakhir (untuk progress bar UI)
+        $peakCount = $countValues > 0 ? max($values) : 1;
+        $loadPct   = $peakCount > 0 ? (int) min(100, round(($currentYearCount / $peakCount) * 100)) : 0;
+
+        return [
+            'source'                    => $source,
+            'synced_at'                 => $syncedAt,
+            'last_breach_added'         => $lastBreachIso,
+            'last_breach_date'          => $lastBreachDate,
+            'breaches_count'            => $breachesCount,
+            'breaches_records'          => $breachesRecs,
+            'breaches_records_short'    => $this->formatCompactEn($breachesRecs) . '+',
+            'pastes_records'            => $pastesRecs,
+            'pastes_records_short'      => $this->formatCompactEn($pastesRecs) . '+',
+            'current_year'              => $currentYear,
+            'current_year_count'        => $currentYearCount,
+            'yoy_diff_pct'              => $yoyFormatted,
+            'vs_avg_pct'                => $vsAvgFormatted,
+            'trend_level'               => $trendLevel,
+            'trend_direction'           => $trendDirection,
+            'load_pct'                  => $loadPct,
+            'chart' => [
+                'labels'     => $labels,
+                'full_years' => $fullYears,
+                'values'     => $values,
+                'average'    => $average,
+            ],
+        ];
+    }
+
+    /**
+     * Snapshot baseline asli dari XposedOrNot jika API & cache sama-sama tidak tersedia.
+     */
+    private function getBaselineMetricsSnapshot(): array
+    {
+        return [
+            'Breaches_Count'        => 801,
+            'Breaches_Records'      => 11727783489,
+            'Pastes_Records'        => 835955029,
+            'Last_Breach_Added'     => '2026-11-15T10:54:14+00:00',
+            'Yearly_Breaches_Count' => [
+                '2017' => 36,
+                '2018' => 53,
+                '2019' => 71,
+                '2020' => 79,
+                '2021' => 61,
+                '2022' => 51,
+                '2023' => 33,
+                '2024' => 54,
+                '2025' => 36,
+                '2026' => 88,
+            ],
+        ];
+    }
+
+    // =========================================================================
     // UTILITY METHODS
     // =========================================================================
+
+    /**
+     * Format angka besar menjadi ringkas berbahasa Inggris (K, M, B) untuk dashboard.
+     */
+    private function formatCompactEn(int $number): string
+    {
+        if ($number >= 1_000_000_000) {
+            return round($number / 1_000_000_000, 1) . 'B';
+        }
+        if ($number >= 1_000_000) {
+            return round($number / 1_000_000, 1) . 'M';
+        }
+        if ($number >= 1_000) {
+            return round($number / 1_000, 1) . 'K';
+        }
+        return number_format($number);
+    }
 
     /**
      * Format angka besar menjadi format yang mudah dibaca.

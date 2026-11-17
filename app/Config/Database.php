@@ -200,5 +200,14 @@ class Database extends Config
         if (ENVIRONMENT === 'testing') {
             $this->defaultGroup = 'tests';
         }
+
+        $mysqlHost = getenv('MYSQLHOST') ?: ($_SERVER['MYSQLHOST'] ?? '');
+        if ($mysqlHost !== '') {
+            $this->default['hostname'] = (string) $mysqlHost;
+            $this->default['username'] = (string) (getenv('MYSQLUSER') ?: ($_SERVER['MYSQLUSER'] ?? 'root'));
+            $this->default['password'] = (string) (getenv('MYSQLPASSWORD') ?: ($_SERVER['MYSQLPASSWORD'] ?? ''));
+            $this->default['database'] = (string) (getenv('MYSQLDATABASE') ?: ($_SERVER['MYSQLDATABASE'] ?? 'railway'));
+            $this->default['port']     = (int) (getenv('MYSQLPORT') ?: ($_SERVER['MYSQLPORT'] ?? 3306));
+        }
     }
 }

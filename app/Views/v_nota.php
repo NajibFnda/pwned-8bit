@@ -2,9 +2,15 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nota Pembayaran - PWNED</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <?php if (env('MIDTRANS_IS_PRODUCTION') === 'true'): ?>
+        <script src="https://app.midtrans.com/snap/snap.js" data-client-key="<?= env('MIDTRANS_CLIENT_KEY') ?>"></script>
+    <?php else: ?>
+        <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="<?= env('MIDTRANS_CLIENT_KEY') ?>"></script>
+    <?php endif; ?>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -26,8 +32,14 @@
         <p class="text-[10px] text-gray-500 mt-2 uppercase font-bold tracking-widest">[ TRANSACTION_RECEIPT ]</p>
     </div>
 
-    <div class="max-w-md w-full space-y-8">
-        <div id="area-struk" class="bg-white p-8 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] relative">
+    <div class="max-w-md w-full space-y-6">
+        <?php if (session()->getFlashdata('upgrade_info')): ?>
+            <div class="bg-blue-600 border-4 border-black text-white px-4 py-3 shadow-[4px_4px_0px_rgba(0,0,0,1)] text-xs font-bold uppercase">
+                [i] <?= esc(session()->getFlashdata('upgrade_info')) ?>
+            </div>
+        <?php endif; ?>
+
+        <div id="area-struk" class="bg-white p-5 sm:p-8 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] relative">
             <div class="absolute -left-3 top-4 bottom-4 flex flex-col justify-between">
                 <div class="w-4 h-4 bg-slate-300 rounded-full border-2 border-black"></div>
                 <div class="w-4 h-4 bg-slate-300 rounded-full border-2 border-black"></div>
@@ -63,6 +75,16 @@
                     <span>CLIENT:</span>
                     <span><?= esc($transaksi['nama']) ?></span>
                 </div>
+                <div class="flex justify-between">
+                    <span>DURATION:</span>
+                    <span><?= ($transaksi['mode'] ?? 'bulanan') === 'tahunan' ? '1 YEAR' : '1 MONTH' ?></span>
+                </div>
+                <?php if (($transaksi['status'] === 'paid' || $transaksi['status'] === 'settlement') && !empty($transaksi['expire_date'])): ?>
+                <div class="flex justify-between">
+                    <span>VALID_UNTIL:</span>
+                    <span class="text-green-700"><?= esc(strtoupper(date('d M Y', strtotime($transaksi['expire_date'])))) ?></span>
+                </div>
+                <?php endif; ?>
             </div>
 
             <div class="space-y-3 mb-6">
@@ -73,27 +95,64 @@
             </div>
 
             <div class="text-center text-xs font-bold text-black mt-8 uppercase tracking-widest space-y-2">
-                <p>STATUS: <span class="bg-black text-white px-2 py-1">PAID / LUNAS</span></p>
-                <div class="border-4 border-yellow-400 bg-yellow-50 px-4 py-3 mt-4 text-left shadow-[4px_4px_0px_rgba(0,0,0,1)]">
-                    <p class="text-[9px] font-pixel text-yellow-800 uppercase tracking-widest leading-relaxed">
-                        [!] YOUR ACCOUNT WILL BE UPDATED SHORTLY
-                    </p>
-                    <p class="text-[9px] text-yellow-700 font-bold mt-2 normal-case tracking-normal">
-                        Paket baru Anda akan diaktifkan setelah dikonfirmasi oleh admin. Proses ini biasanya memakan waktu kurang dari 24 jam.
-                    </p>
-                </div>
+                <?php if ($transaksi['status'] == 'paid' || $transaksi['status'] == 'settlement'): ?>
+                    <p>STATUS: <span class="bg-black text-white px-2 py-1">PAID / LUNAS</span></p>
+                    <div class="border-4 border-green-400 bg-green-50 px-4 py-3 mt-4 text-left shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+                        <p class="text-[9px] font-pixel text-green-800 uppercase tracking-widest leading-relaxed">
+                            [!] PAYMENT SUCCESSFUL
+                        </p>
+                        <p class="text-[9px] text-green-700 font-bold mt-2 normal-case tracking-normal">
+                            <?= esc(session()->getFlashdata('upgrade_success') ?? 'Paket Anda telah aktif. Terima kasih atas pembelian Anda.') ?>
+                        </p>
+                    </div>
+                <?php elseif ($transaksi['status'] == 'pending'): ?>
+                    <p>STATUS: <span class="bg-yellow-300 text-black px-2 py-1 border-2 border-black">PENDING</span></p>
+                    <div class="border-4 border-yellow-400 bg-yellow-50 px-4 py-3 mt-4 text-left shadow-[4px_4px_0px_rgba(0,0,0,1)] space-y-2">
+                        <p class="text-[9px] font-pixel text-yellow-800 uppercase tracking-widest leading-relaxed">
+                            [!] AWAITING PAYMENT (<?= esc(strtoupper($payment_method ?? 'QRIS')) ?>)
+                        </p>
+                        <?php if (empty($snap_token)): ?>
+                            <?php if (($payment_method ?? 'qris') === 'bank'): ?>
+                                <p class="text-[9px] text-yellow-900 font-bold normal-case tracking-normal">
+                                    Transfer ke VA BCA <b>8077 0812 3456</b> atau BNI <b>829 0812 3456 78</b>, lalu klik tombol konfirmasi di bawah untuk mengaktifkan paket.
+                                </p>
+                            <?php else: ?>
+                                <div class="flex items-center gap-3 pt-1">
+                                    <img src="<?= base_url('image/qr.png') ?>" alt="QRIS" class="w-16 h-16 border-2 border-black bg-white p-1">
+                                    <p class="text-[9px] text-yellow-900 font-bold normal-case tracking-normal">
+                                        Scan QRIS sebesar <b>Rp<?= number_format($transaksi['harga'], 0, ',', '.') ?></b>, lalu klik tombol konfirmasi di bawah untuk mengaktifkan paket.
+                                    </p>
+                                </div>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <p class="text-[9px] text-yellow-700 font-bold normal-case tracking-normal">
+                                Silakan selesaikan pembayaran Anda melalui Midtrans untuk mengaktifkan paket ini.
+                            </p>
+                        <?php endif; ?>
+                    </div>
+                <?php else: ?>
+                    <p>STATUS: <span class="bg-red-500 text-white px-2 py-1"><?= esc(strtoupper($transaksi['status'])) ?></span></p>
+                <?php endif; ?>
                 <p class="pt-4 text-[10px]">THANK YOU FOR YOUR PURCHASE.</p>
                 <p class="text-[10px]">END OF TRANSMISSION.</p>
             </div>
         </div>
 
         <div class="flex gap-4 pt-4">
-            <a href="<?= base_url('/') ?>" class="w-1/3 bg-gray-400 hover:bg-gray-500 border-4 border-black text-black text-center font-pixel text-[10px] py-4 uppercase shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-none">
-                < DASHBOARD
+            <a href="<?= base_url('upgrade') ?>" class="w-1/3 bg-gray-400 hover:bg-gray-500 border-4 border-black text-black text-center font-pixel text-[10px] py-4 uppercase shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-none flex items-center justify-center">
+                &lt; UPGRADE
             </a>
-            <button onclick="downloadPDF()" class="w-2/3 bg-blue-600 hover:bg-blue-800 border-4 border-black text-white text-center font-pixel text-[10px] py-4 uppercase shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-none flex justify-center items-center gap-2">
-                <span>DOWNLOAD PDF</span>
-            </button>
+            
+            <?php if ($transaksi['status'] == 'pending'): ?>
+                <a href="<?= base_url('upgrade?contact=1') ?>"
+                   class="w-2/3 bg-blue-600 hover:bg-blue-800 border-4 border-black text-white text-center font-pixel text-[10px] py-4 uppercase shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-none flex justify-center items-center gap-2">
+                    <span>CONTACT ADMIN &gt;&gt;</span>
+                </a>
+            <?php else: ?>
+                <button onclick="downloadPDF()" class="w-2/3 bg-blue-600 hover:bg-blue-800 border-4 border-black text-white text-center font-pixel text-[10px] py-4 uppercase shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-none flex justify-center items-center gap-2">
+                    <span>DOWNLOAD PDF</span>
+                </button>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -109,6 +168,25 @@
             };
             html2pdf().set(opsi).from(elemen).save();
         }
+
+        <?php if ($transaksi['status'] == 'pending' && !empty($snap_token)): ?>
+        document.getElementById('pay-button').onclick = function(){
+            snap.pay('<?= esc($snap_token) ?>', {
+                onSuccess: function(result){
+                    window.location.href = "<?= base_url('upgrade/nota/' . $transaksi['id'] . '/success') ?>";
+                },
+                onPending: function(result){
+                    window.location.reload();
+                },
+                onError: function(result){
+                    alert("Payment failed!"); console.log(result);
+                },
+                onClose: function(){
+                    alert('Anda menutup popup sebelum menyelesaikan pembayaran.');
+                }
+            })
+        };
+        <?php endif; ?>
     </script>
 </body>
 </html>

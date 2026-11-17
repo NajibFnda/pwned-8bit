@@ -39,7 +39,10 @@ abstract class BaseController extends Controller
         // Caution: Do not edit this line.
         parent::initController($request, $response, $logger);
 
-        // Preload any models, libraries, etc, here.
-        // $this->session = service('session');
+        // Terapkan security headers standar untuk produksi & dev
+        $this->response->setHeader('X-Frame-Options', 'SAMEORIGIN');
+        $this->response->setHeader('X-Content-Type-Options', 'nosniff');
+        $this->response->setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+        $this->response->setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
     }
 }
