@@ -208,6 +208,21 @@ class Database extends Config
             $this->default['password'] = (string) (getenv('MYSQLPASSWORD') ?: ($_SERVER['MYSQLPASSWORD'] ?? ''));
             $this->default['database'] = (string) (getenv('MYSQLDATABASE') ?: ($_SERVER['MYSQLDATABASE'] ?? 'railway'));
             $this->default['port']     = (int) (getenv('MYSQLPORT') ?: ($_SERVER['MYSQLPORT'] ?? 3306));
+
+            $useSsl = filter_var(
+                getenv('MYSQL_SSL') ?: ($_SERVER['MYSQL_SSL'] ?? 'false'),
+                FILTER_VALIDATE_BOOLEAN
+            );
+            if ($useSsl) {
+                $caPath = (string) (getenv('MYSQL_SSL_CA') ?: ($_SERVER['MYSQL_SSL_CA'] ?? ''));
+                if ($caPath === '' && is_file('/etc/ssl/certs/ca-certificates.crt')) {
+                    $caPath = '/etc/ssl/certs/ca-certificates.crt';
+                }
+                $this->default['encrypt'] = [
+                    'ssl_ca'     => $caPath,
+                    'ssl_verify' => true,
+                ];
+            }
         }
     }
 }

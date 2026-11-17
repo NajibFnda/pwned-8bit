@@ -8,21 +8,32 @@ if ($host === '') {
     exit(0);
 }
 
-$user = getenv('MYSQLUSER') ?: 'root';
-$pass = getenv('MYSQLPASSWORD') ?: '';
-$name = getenv('MYSQLDATABASE') ?: 'railway';
-$port = (int) (getenv('MYSQLPORT') ?: 3306);
+$user   = getenv('MYSQLUSER') ?: 'root';
+$pass   = getenv('MYSQLPASSWORD') ?: '';
+$name   = getenv('MYSQLDATABASE') ?: 'railway';
+$port   = (int) (getenv('MYSQLPORT') ?: 3306);
+$useSsl = filter_var(getenv('MYSQL_SSL') ?: 'false', FILTER_VALIDATE_BOOLEAN);
 
 $db = null;
 for ($attempt = 1; $attempt <= 15; $attempt++) {
     try {
         mysqli_report(MYSQLI_REPORT_OFF);
-        $conn = @new mysqli($host, $user, $pass, $name, $port);
-        if (!$conn->connect_errno) {
+        $conn  = mysqli_init();
+        $flags = 0;
+        if ($useSsl && $conn) {
+            $caPath = (string) (getenv('MYSQL_SSL_CA') ?: '');
+            if ($caPath === '' && is_file('/etc/ssl/certs/ca-certificates.crt')) {
+                $caPath = '/etc/ssl/certs/ca-certificates.crt';
+            }
+            $conn->ssl_set(null, null, $caPath !== '' ? $caPath : null, null, null);
+            $flags = MYSQLI_CLIENT_SSL;
+        }
+        if ($conn && @$conn->real_connect($host, $user, $pass, $name, $port, null, $flags)) {
             $db = $conn;
             break;
         }
-        echo "[docker-init-db] Waiting for MySQL ({$attempt}/15): {$conn->connect_error}\n";
+        $err = $conn ? $conn->connect_error : 'mysqli_init failed';
+        echo "[docker-init-db] Waiting for MySQL ({$attempt}/15): {$err}\n";
     } catch (\Throwable $e) {
         echo "[docker-init-db] Waiting for MySQL ({$attempt}/15): {$e->getMessage()}\n";
     }

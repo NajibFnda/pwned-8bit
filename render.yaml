@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: pwned-8bit
+    runtime: docker
+    plan: free
+    region: singapore
+    autoDeploy: true
+    envVars:
+      - key: CI_ENVIRONMENT
+        value: production
+      - key: XON_API_BASE_URL
+        value: https://api.xposedornot.com/v1
+      - key: XON_SSL_VERIFY
+        value: "true"
+      - key: MYSQL_SSL
+        value: "true"
+      - key: MYSQLPORT
+        value: "4000"
+      - key: MYSQLDATABASE
+        value: test
+      - key: MYSQLHOST
+        sync: false
+      - key: MYSQLUSER
+        sync: false
+      - key: MYSQLPASSWORD
+        sync: false

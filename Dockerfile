@@ -1,6 +1,7 @@
 FROM php:8.2-apache
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
     libicu-dev \
     libzip-dev \
     unzip \

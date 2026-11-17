@@ -205,9 +205,16 @@ class App extends BaseConfig
         parent::__construct();
 
         $railwayDomain = getenv('RAILWAY_PUBLIC_DOMAIN') ?: ($_SERVER['RAILWAY_PUBLIC_DOMAIN'] ?? '');
-        if ($railwayDomain !== '' && empty(getenv('app.baseURL'))) {
-            $this->baseURL  = 'https://' . rtrim($railwayDomain, '/') . '/';
-            $this->proxyIPs = ['0.0.0.0/0' => 'X-Forwarded-For'];
+        $renderUrl     = getenv('RENDER_EXTERNAL_URL') ?: ($_SERVER['RENDER_EXTERNAL_URL'] ?? '');
+
+        if (empty(getenv('app.baseURL'))) {
+            if ($renderUrl !== '') {
+                $this->baseURL  = rtrim((string) $renderUrl, '/') . '/';
+                $this->proxyIPs = ['0.0.0.0/0' => 'X-Forwarded-For'];
+            } elseif ($railwayDomain !== '') {
+                $this->baseURL  = 'https://' . rtrim((string) $railwayDomain, '/') . '/';
+                $this->proxyIPs = ['0.0.0.0/0' => 'X-Forwarded-For'];
+            }
         }
     }
 }
