@@ -505,7 +505,7 @@
                         </div>
                         <div class="border-2 border-white p-4 flex flex-col md:flex-row items-center gap-6 bg-[#111]">
                             <div class="w-24 h-24 border-2 border-white bg-black flex-shrink-0 flex items-center justify-center p-1">
-                                <img src="<?= base_url('image/Nanduy.jpeg') ?>" alt="Foto" class="w-full h-full object-cover filter grayscale contrast-125">
+                                <img src="<?= base_url('image/nanduy.jpeg') ?>" alt="Foto" class="w-full h-full object-cover filter grayscale contrast-125">
                             </div>
                             <div class="space-y-2 text-center md:text-left">
                                 <h4 class="text-sm font-bold text-white uppercase">Muhammad Najib Finanda</h4>
