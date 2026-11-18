@@ -23,6 +23,7 @@ $routes->get('upgrade/nota/(:num)', 'Home::nota/$1');
 $routes->post('midtrans/webhook', 'Home::midtransWebhook');
 
 // ─── Auth Routes ──────────────────────────────────────────────────────────────
+$routes->get('/captcha/(:segment)', 'Auth::captcha/$1');
 $routes->get('/login', 'Auth::login');
 $routes->post('/auth/process', 'Auth::process');
 $routes->post('/auth/changePassword', 'Auth::changePassword');
@@ -34,6 +35,8 @@ $routes->post('/auth/saveRegister', 'Auth::saveRegister');
 $routes->group('admin', function($routes) {
     $routes->get('/', 'AdminController::index');
     $routes->get('users', 'AdminController::users');
+    $routes->post('users/delete/(:num)', 'AdminController::deleteUser/$1');
+    $routes->post('users/cleanup-spam', 'AdminController::cleanupSpamUsers');
     $routes->post('update-subscription/(:num)', 'AdminController::updateSubscription/$1');
     $routes->get('sales', 'AdminController::sales');
     $routes->post('sales/verify/(:num)', 'AdminController::verifyTransaction/$1');

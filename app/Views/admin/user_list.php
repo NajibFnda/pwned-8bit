@@ -20,14 +20,35 @@
     </div>
 <?php endif; ?>
 
-<div class="flex flex-col md:flex-row justify-between items-end mb-6 gap-4">
-    <h2 class="font-bold text-black uppercase tracking-widest text-lg">Daftar Pengguna</h2>
+<div class="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-6 gap-4">
+    <div>
+        <h2 class="font-bold text-black uppercase tracking-widest text-lg">Daftar Pengguna</h2>
+        <p class="text-[10px] font-bold text-gray-600 uppercase mt-1">Total Terdaftar: <?= number_format((int) ($total_users ?? count($users))) ?> Akun</p>
+    </div>
 
-    <div class="flex border-4 border-black bg-white shadow-[4px_4px_0px_rgba(0,0,0,1)] text-xs font-bold uppercase">
-        <a href="<?= base_url('admin') ?>" class="px-4 py-2 border-r-4 border-black <?= empty($filter_aktif) ? 'bg-black text-white' : 'text-black hover:bg-gray-200' ?>">Semua</a>
-        <a href="<?= base_url('admin?paket=free') ?>" class="px-4 py-2 border-r-4 border-black <?= (isset($filter_aktif) && $filter_aktif == 'free') ? 'bg-gray-300 text-black' : 'text-black hover:bg-gray-200' ?>">Free</a>
-        <a href="<?= base_url('admin?paket=plus') ?>" class="px-4 py-2 border-r-4 border-black <?= (isset($filter_aktif) && $filter_aktif == 'plus') ? 'bg-blue-600 text-white' : 'text-black hover:bg-gray-200' ?>">Plus</a>
-        <a href="<?= base_url('admin?paket=pro') ?>" class="px-4 py-2 <?= (isset($filter_aktif) && $filter_aktif == 'pro') ? 'bg-red-600 text-white' : 'text-black hover:bg-gray-200' ?>">Pro</a>
+    <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+        <form method="GET" action="<?= base_url('admin') ?>" class="flex border-4 border-black bg-white shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+            <?php if (!empty($filter_aktif)): ?>
+                <input type="hidden" name="paket" value="<?= esc($filter_aktif) ?>">
+            <?php endif; ?>
+            <input type="text" name="q" value="<?= esc($search_q ?? '') ?>" placeholder="Cari nama/email..."
+                class="px-3 py-2 text-xs font-bold outline-none bg-white w-44 sm:w-52">
+            <button type="submit" class="px-3 py-2 bg-black text-white text-xs font-bold uppercase hover:bg-blue-600">CARI</button>
+        </form>
+
+        <div class="flex border-4 border-black bg-white shadow-[4px_4px_0px_rgba(0,0,0,1)] text-xs font-bold uppercase">
+            <a href="<?= base_url('admin') ?>" class="px-3 py-2 border-r-4 border-black <?= empty($filter_aktif) ? 'bg-black text-white' : 'text-black hover:bg-gray-200' ?>">Semua</a>
+            <a href="<?= base_url('admin?paket=free') ?>" class="px-3 py-2 border-r-4 border-black <?= (isset($filter_aktif) && $filter_aktif == 'free') ? 'bg-gray-300 text-black' : 'text-black hover:bg-gray-200' ?>">Free</a>
+            <a href="<?= base_url('admin?paket=plus') ?>" class="px-3 py-2 border-r-4 border-black <?= (isset($filter_aktif) && $filter_aktif == 'plus') ? 'bg-blue-600 text-white' : 'text-black hover:bg-gray-200' ?>">Plus</a>
+            <a href="<?= base_url('admin?paket=pro') ?>" class="px-3 py-2 <?= (isset($filter_aktif) && $filter_aktif == 'pro') ? 'bg-red-600 text-white' : 'text-black hover:bg-gray-200' ?>">Pro</a>
+        </div>
+
+        <form method="POST" action="<?= base_url('admin/users/cleanup-spam') ?>" onsubmit="return confirm('Bersihkan semua akun spam bot (free tanpa transaksi & pola acak)? Akun normal & pro tidak akan terhapus.');">
+            <?= csrf_field() ?>
+            <button type="submit" class="bg-red-600 hover:bg-red-800 text-white px-3 py-2.5 text-[10px] font-pixel uppercase border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+                HAPUS SPAM BOT
+            </button>
+        </form>
     </div>
 </div>
  
@@ -73,11 +94,21 @@
                                 <?= !empty($user['expire_date']) ? date('d M Y', strtotime($user['expire_date'])) : '<span class="text-gray-400">Selamanya</span>' ?>
                             </td>
                             <td class="px-6 py-4 text-center">
-                                <button
-                                    onclick="openModal(<?= $user['id'] ?>, '<?= $user['subscription_plan'] ?>', '<?= $user['expire_date'] ?>', '<?= esc($user['email']) ?>')"
-                                    class="bg-white text-black hover:bg-black hover:text-white px-4 py-2 text-[10px] font-pixel uppercase transition-none border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]">
-                                    EDIT
-                                </button>
+                                <div class="flex items-center justify-center gap-2">
+                                    <button
+                                        onclick="openModal(<?= $user['id'] ?>, '<?= $user['subscription_plan'] ?>', '<?= $user['expire_date'] ?>', '<?= esc($user['email']) ?>')"
+                                        class="bg-white text-black hover:bg-black hover:text-white px-3 py-2 text-[10px] font-pixel uppercase transition-none border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+                                        EDIT
+                                    </button>
+                                    <?php if (($user['role'] ?? 'user') !== 'admin' && (int) $user['id'] !== (int) session()->get('id')): ?>
+                                        <form method="POST" action="<?= base_url('admin/users/delete/' . (int) $user['id']) ?>" onsubmit="return confirm('Hapus akun <?= esc($user['email']) ?>?');">
+                                            <?= csrf_field() ?>
+                                            <button type="submit" class="bg-red-600 hover:bg-red-800 text-white px-3 py-2 text-[10px] font-pixel uppercase transition-none border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+                                                HAPUS
+                                            </button>
+                                        </form>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -91,6 +122,24 @@
             </tbody>
         </table>
     </div>
+    <?php
+        $currPage  = isset($pager) ? $pager->getCurrentPage('users') : 1;
+        $pageCount = isset($pager) ? $pager->getPageCount('users') : 1;
+        $baseQuery = array_filter(['paket' => $filter_aktif ?? '', 'q' => $search_q ?? '']);
+    ?>
+    <?php if ($pageCount > 1): ?>
+        <div class="p-4 border-t-4 border-black bg-gray-100 flex flex-wrap justify-between items-center gap-3 text-xs font-bold uppercase">
+            <span>Halaman <?= $currPage ?> dari <?= $pageCount ?></span>
+            <div class="flex gap-2">
+                <?php if ($currPage > 1): ?>
+                    <a href="<?= base_url('admin?' . http_build_query(array_merge($baseQuery, ['page_users' => $currPage - 1]))) ?>" class="px-3 py-2 bg-white hover:bg-black hover:text-white border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]">&lt; PREV</a>
+                <?php endif; ?>
+                <?php if ($currPage < $pageCount): ?>
+                    <a href="<?= base_url('admin?' . http_build_query(array_merge($baseQuery, ['page_users' => $currPage + 1]))) ?>" class="px-3 py-2 bg-white hover:bg-black hover:text-white border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]">NEXT &gt;</a>
+                <?php endif; ?>
+            </div>
+        </div>
+    <?php endif; ?>
 </div>
 
 

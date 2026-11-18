@@ -2,29 +2,68 @@
 
 namespace App\Controllers;
 
+use App\Libraries\SecurityGuard;
 use App\Models\UserModel;
 
 class Auth extends BaseController
 {
+    private const ALLOWED_CAPTCHA_SCOPES = ['register', 'contact', 'login'];
+
+    /**
+     * Serve single-use pure-PHP distorted PNG CAPTCHA image for protected forms.
+     */
+    public function captcha(string $scope = 'register')
+    {
+        $guard = new SecurityGuard();
+        $ipKey = $guard->getIpKey($this->request);
+
+        $bucket = $guard->hitBucket('captcha_gen', $ipKey, 30, 60, true, $ipKey);
+        if (!$bucket['allowed']) {
+            return $guard->tooManyRequestsResponse($this->request, 'Terlalu sering memuat ulang CAPTCHA.', $bucket['retry_after'], true);
+        }
+
+        if (!in_array($scope, self::ALLOWED_CAPTCHA_SCOPES, true)) {
+            $scope = 'register';
+        }
+
+        $png = $guard->generateCaptchaPng($scope);
+
+        return $this->response
+            ->setStatusCode(200)
+            ->setHeader('Content-Type', 'image/png')
+            ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->setHeader('Pragma', 'no-cache')
+            ->setBody($png);
+    }
 
     public function login()
     {
-        return view('v_login');
-    }
+        $guard = new SecurityGuard();
+        $ipKey = $guard->getIpKey($this->request);
+        $guard->issueFormTimer('login');
 
+        return view('v_login', $this->buildLoginViewData($guard, $ipKey));
+    }
 
     public function process()
     {
-        $session   = session();
-        $throttler = \Config\Services::throttler();
-        $ipHash    = md5((string) $this->request->getIPAddress());
+        $session = session();
+        $guard   = new SecurityGuard();
+        $ipKey   = $guard->getIpKey($this->request);
 
-        if ($throttler->check('login_' . $ipHash, 10, MINUTE) === false) {
-            $session->setFlashdata('error', 'Terlalu banyak percobaan login. Silakan tunggu 1 menit.');
-            return redirect()->to('/login');
+        if (trim((string) $this->request->getPost('website_url')) !== '') {
+            $guard->recordStrike($ipKey);
+            return $guard->tooManyRequestsResponse($this->request, 'Permintaan ditolak (deteksi bot).', 120);
         }
 
-        $userModel = new UserModel();
+        $ipLimit = $guard->hitBucket('login_ip', $ipKey, 8, 60, true, $ipKey);
+        if (!$ipLimit['allowed']) {
+            return $guard->tooManyRequestsResponse(
+                $this->request,
+                'Terlalu banyak percobaan login dari IP Anda. Silakan tunggu 1 menit.',
+                $ipLimit['retry_after']
+            );
+        }
 
         $email    = strtolower(trim((string) $this->request->getPost('email')));
         $password = (string) $this->request->getPost('password');
@@ -34,7 +73,31 @@ class Auth extends BaseController
             return redirect()->to('/login');
         }
 
-        $user = $userModel->where('email', $email)->first();
+        // Per-target-account lock after 5 failed attempts in 15 minutes
+        $emailKey = md5($email . '|' . $ipKey);
+        if ($guard->peekBucketCount('login_email_fail', $emailKey, 900) >= 5) {
+            $guard->recordStrike($ipKey);
+            return $guard->tooManyRequestsResponse(
+                $this->request,
+                'Akun ini terkunci sementara karena terlalu banyak percobaan sandi yang salah (15 menit).',
+                900
+            );
+        }
+
+        // Enforce CAPTCHA on login once 3+ failures occurred from this IP
+        if ($guard->peekBucketCount('login_fail', $ipKey, 900) >= 3) {
+            if (!$guard->verifyHumanChallenge('login', $this->request)) {
+                $guard->issueFormTimer('login');
+                $this->response->setStatusCode(422);
+                return view('v_login', array_merge($this->buildLoginViewData($guard, $ipKey), [
+                    'form_error' => 'Kode verifikasi (CAPTCHA) salah atau kedaluwarsa.',
+                    'old_email'  => $email,
+                ]));
+            }
+        }
+
+        $userModel = new UserModel();
+        $user      = $userModel->where('email', $email)->first();
 
         if ($user) {
             $storedPassword = (string) $user['password'];
@@ -44,7 +107,6 @@ class Auth extends BaseController
                 : hash_equals($storedPassword, $password);
 
             if ($passwordValid) {
-                // Upgrade password legacy plaintext ke hash aman saat login berhasil
                 $updateData = [];
                 if (!$isHashed || password_needs_rehash($storedPassword, PASSWORD_DEFAULT)) {
                     $updateData['password'] = password_hash($password, PASSWORD_DEFAULT);
@@ -80,10 +142,14 @@ class Auth extends BaseController
                 return redirect()->to('/');
             }
 
+            $guard->hitBucket('login_fail', $ipKey, 100, 900, false);
+            $guard->hitBucket('login_email_fail', $emailKey, 100, 900, false);
             $session->setFlashdata('error', 'Kata sandi yang Anda masukkan salah!');
             return redirect()->to('/login');
         }
 
+        $guard->hitBucket('login_fail', $ipKey, 100, 900, false);
+        $guard->hitBucket('login_email_fail', $emailKey, 100, 900, false);
         $session->setFlashdata('error', 'Alamat email tidak ditemukan!');
         return redirect()->to('/login');
     }
@@ -95,15 +161,84 @@ class Auth extends BaseController
         return redirect()->to('/login');
     }
 
-
-
     public function register()
     {
-        return view('v_register');
+        $guard = new SecurityGuard();
+        $guard->issueFormTimer('register');
+
+        return view('v_register', $this->buildRegisterViewData($guard));
     }
 
     public function saveRegister()
     {
+        $guard = new SecurityGuard();
+        $ipKey = $guard->getIpKey($this->request);
+
+        // 1. Honeypot trap
+        if (trim((string) $this->request->getPost('website_url')) !== '') {
+            $guard->recordStrike($ipKey);
+            return $guard->tooManyRequestsResponse($this->request, 'Permintaan ditolak (deteksi bot).', 120);
+        }
+
+        // 2. Atomic per-IP attempt rate limit (max 5 attempts / 15 min)
+        $attemptLimit = $guard->hitBucket('reg_attempt_15m', $ipKey, 5, 900, true, $ipKey);
+        if (!$attemptLimit['allowed']) {
+            return $guard->tooManyRequestsResponse(
+                $this->request,
+                'Terlalu banyak percobaan pendaftaran akun dari IP Anda.',
+                $attemptLimit['retry_after']
+            );
+        }
+
+        // 3. Persistent MySQL registration quota (max 3 accounts / 15 min AND 5 / 24h per IP)
+        $dbShort = $guard->checkDbQuota('register_ok', $ipKey, 3, 900);
+        if (!$dbShort['allowed']) {
+            $guard->recordStrike($ipKey);
+            return $guard->tooManyRequestsResponse(
+                $this->request,
+                'Batas pendaftaran akun sementara dari IP Anda tercapai (maks 3 akun / 15 menit).',
+                $dbShort['retry_after']
+            );
+        }
+
+        $dbDaily = $guard->checkDbQuota('register_ok', $ipKey, 5, 86400);
+        if (!$dbDaily['allowed']) {
+            $guard->recordStrike($ipKey);
+            return $guard->tooManyRequestsResponse(
+                $this->request,
+                'Batas pendaftaran harian dari IP Anda tercapai (maks 5 akun / 24 jam).',
+                $dbDaily['retry_after']
+            );
+        }
+
+        $nama  = trim((string) $this->request->getPost('nama'));
+        $email = strtolower(trim((string) $this->request->getPost('email')));
+        $pass  = (string) $this->request->getPost('password');
+
+        // 4. Reject instant automated submissions (< 1.5s from form load)
+        if (!$guard->verifyFormTimer('register', 1.5)) {
+            $guard->recordStrike($ipKey);
+            $guard->issueFormTimer('register');
+            $this->response->setStatusCode(422);
+            return view('v_register', array_merge($this->buildRegisterViewData($guard), [
+                'form_error' => 'Pengiriman terlalu cepat atau sesi formulir kedaluwarsa. Silakan ulangi dengan wajar.',
+                'old_nama'   => $nama,
+                'old_email'  => $email,
+            ]));
+        }
+
+        // 5. Verify single-use PNG CAPTCHA (or Cloudflare Turnstile if configured)
+        if (!$guard->verifyHumanChallenge('register', $this->request)) {
+            $guard->issueFormTimer('register');
+            $this->response->setStatusCode(422);
+            return view('v_register', array_merge($this->buildRegisterViewData($guard), [
+                'form_error' => 'Kode verifikasi (CAPTCHA) salah atau kedaluwarsa.',
+                'old_nama'   => $nama,
+                'old_email'  => $email,
+            ]));
+        }
+
+        // 6. Field validation
         $validation = \Config\Services::validation();
         $validation->setRules([
             'nama' => [
@@ -133,18 +268,22 @@ class Auth extends BaseController
             ],
         ]);
 
-        if (!$validation->withRequest($this->request)->run()) {
-            return redirect()
-                ->to('/register')
-                ->withInput()
-                ->with('error', implode(' ', $validation->getErrors()));
+        $isValid = $validation->withRequest($this->request)->run();
+        if (!$isValid || preg_match('/(https?:\/\/|www\.)/i', $nama)) {
+            $errMsg = !$isValid
+                ? implode(' ', $validation->getErrors())
+                : 'Nama tidak boleh berisi tautan/URL.';
+
+            $guard->issueFormTimer('register');
+            $this->response->setStatusCode(422);
+            return view('v_register', array_merge($this->buildRegisterViewData($guard), [
+                'form_error' => $errMsg,
+                'old_nama'   => $nama,
+                'old_email'  => $email,
+            ]));
         }
 
         $userModel = new UserModel();
-        $nama      = trim((string) $this->request->getPost('nama'));
-        $email     = strtolower(trim((string) $this->request->getPost('email')));
-        $pass      = (string) $this->request->getPost('password');
-
         $userModel->save([
             'nama'              => $nama,
             'email'             => $email,
@@ -154,20 +293,28 @@ class Auth extends BaseController
             'expire_date'       => null,
         ]);
 
+        $guard->recordDbHit('register_ok', $ipKey);
+
         return redirect()->to('/login')->with('success', 'Akun berhasil dibuat! Silakan masuk sistem.');
     }
 
     public function changePassword()
     {
-        $session   = session();
-        $throttler = \Config\Services::throttler();
-        $ipHash    = md5((string) $this->request->getIPAddress());
+        $guard = new SecurityGuard();
+        $ipKey = $guard->getIpKey($this->request);
 
-        if ($throttler->check('change_pwd_' . $ipHash, 5, MINUTE) === false) {
-            return redirect()
-                ->to('/login?mode=change')
-                ->withInput()
-                ->with('error', 'Terlalu banyak percobaan. Silakan tunggu 1 menit.');
+        if (trim((string) $this->request->getPost('website_url')) !== '') {
+            $guard->recordStrike($ipKey);
+            return $guard->tooManyRequestsResponse($this->request, 'Permintaan ditolak (deteksi bot).', 120);
+        }
+
+        $limit = $guard->hitBucket('change_pwd_ip', $ipKey, 5, 60, true, $ipKey);
+        if (!$limit['allowed']) {
+            return $guard->tooManyRequestsResponse(
+                $this->request,
+                'Terlalu banyak percobaan ubah kata sandi. Silakan tunggu 1 menit.',
+                $limit['retry_after']
+            );
         }
 
         $email           = strtolower(trim((string) $this->request->getPost('email')));
@@ -226,5 +373,20 @@ class Auth extends BaseController
         return redirect()
             ->to('/login')
             ->with('success', 'Kata sandi berhasil diperbarui! Silakan login dengan sandi baru.');
+    }
+
+    private function buildRegisterViewData(SecurityGuard $guard): array
+    {
+        return [
+            'turnstile_site_key' => $guard->isTurnstileEnabled() ? $guard->getTurnstileSiteKey() : '',
+        ];
+    }
+
+    private function buildLoginViewData(SecurityGuard $guard, string $ipKey): array
+    {
+        return [
+            'show_captcha'       => $guard->peekBucketCount('login_fail', $ipKey, 900) >= 3,
+            'turnstile_site_key' => $guard->isTurnstileEnabled() ? $guard->getTurnstileSiteKey() : '',
+        ];
     }
 }

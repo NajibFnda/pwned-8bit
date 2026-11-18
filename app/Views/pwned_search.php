@@ -10,6 +10,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <?php if (!empty($turnstile_site_key)): ?>
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <?php endif; ?>
     <style>
         .font-pixel { font-family: 'Press Start 2P', cursive; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
@@ -814,54 +817,79 @@
 
             <!-- Body: Form -->
             <div id="contactFormBody" class="p-6 space-y-5 bg-gray-50">
-                <div class="border-l-4 border-blue-600 pl-3 mb-2">
-                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">&gt; Kirim pesan atau permintaan ke admin. Kami akan segera merespons.</p>
-                </div>
-
-                <div id="contactErrorBox" class="hidden bg-red-100 border-2 border-red-600 text-red-700 px-3 py-2 text-xs font-bold uppercase"></div>
-
-                <div>
-                    <label class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">&gt; Nama</label>
-                    <input type="text" id="contact_nama" placeholder="Nama kamu..."
-                        value="<?= esc(session()->get('nama') ?? '') ?>"
-                        class="w-full px-4 py-3 bg-white border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] outline-none font-bold text-black placeholder-gray-400 text-sm">
-                </div>
-
-                <div>
-                    <label class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">&gt; Email</label>
-                    <input type="email" id="contact_email" placeholder="email@kamu.com"
-                        value="<?= esc(session()->get('email') ?? '') ?>"
-                        class="w-full px-4 py-3 bg-white border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] outline-none font-bold text-black placeholder-gray-400 text-sm">
-                </div>
-
-                <div>
-                    <label class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">&gt; Jenis Permintaan</label>
-                    <div class="relative border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] bg-white">
-                        <select id="contact_jenis" class="w-full px-4 py-3 bg-transparent outline-none font-bold text-black uppercase cursor-pointer appearance-none text-sm">
-                            <option value="upgrade_plus">Upgrade ke PLUS</option>
-                            <option value="upgrade_pro">Upgrade ke PRO</option>
-                            <option value="downgrade_free">Downgrade ke FREE</option>
-                            <option value="report">Laporkan Masalah</option>
-                            <option value="other">Lainnya</option>
-                        </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-black border-l-4 border-black">▼</div>
+                <?php if (!session()->get('logged_in')): ?>
+                    <div class="bg-yellow-50 border-4 border-black p-4 space-y-3 text-center">
+                        <p class="font-pixel text-[9px] text-black uppercase">[!] LOGIN DIPERLUKAN</p>
+                        <p class="text-xs font-bold text-gray-700 leading-relaxed">Untuk mencegah spam, hanya pengguna yang sudah login yang dapat mengirim pesan atau pengajuan upgrade ke Admin.</p>
+                        <a href="<?= base_url('login') ?>" class="inline-block bg-blue-600 hover:bg-blue-800 text-white font-pixel text-[9px] px-5 py-3 border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] uppercase">
+                            LOGIN SEKARANG
+                        </a>
                     </div>
-                </div>
+                <?php else: ?>
+                    <div class="border-l-4 border-blue-600 pl-3 mb-2">
+                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">&gt; Kirim pesan atau permintaan ke admin. Kami akan segera merespons.</p>
+                    </div>
 
-                <div>
-                    <label class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">&gt; Pesan</label>
-                    <textarea id="contact_pesan" rows="4" placeholder="Tuliskan pesan atau alasanmu di sini..."
-                        class="w-full px-4 py-3 bg-white border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] outline-none font-bold text-black placeholder-gray-400 text-sm resize-none"></textarea>
-                </div>
+                    <div id="contactErrorBox" class="hidden bg-red-100 border-2 border-red-600 text-red-700 px-3 py-2 text-xs font-bold uppercase"></div>
+                    <input type="text" id="contact_website_url" tabindex="-1" autocomplete="off" value="" class="hidden">
 
-                <div class="flex gap-3 pt-2">
-                    <button type="button" onclick="closeContactModal()" class="w-1/3 bg-gray-300 hover:bg-gray-400 border-4 border-black text-black font-pixel text-[9px] py-4 uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-none">
-                        BATAL
-                    </button>
-                    <button type="button" id="contactSubmitBtn" onclick="submitContact()" class="w-2/3 bg-black hover:bg-blue-700 border-4 border-black text-white font-pixel text-[9px] py-4 uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-none">
-                        KIRIM &gt;&gt; ADMIN
-                    </button>
-                </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">&gt; Nama</label>
+                        <input type="text" id="contact_nama" placeholder="Nama kamu..."
+                            value="<?= esc(session()->get('nama') ?? '') ?>"
+                            class="w-full px-4 py-3 bg-white border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] outline-none font-bold text-black placeholder-gray-400 text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">&gt; Email</label>
+                        <input type="email" id="contact_email" placeholder="email@kamu.com"
+                            value="<?= esc(session()->get('email') ?? '') ?>"
+                            class="w-full px-4 py-3 bg-white border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] outline-none font-bold text-black placeholder-gray-400 text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">&gt; Jenis Permintaan</label>
+                        <div class="relative border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] bg-white">
+                            <select id="contact_jenis" class="w-full px-4 py-3 bg-transparent outline-none font-bold text-black uppercase cursor-pointer appearance-none text-sm">
+                                <option value="upgrade_plus">Upgrade ke PLUS</option>
+                                <option value="upgrade_pro">Upgrade ke PRO</option>
+                                <option value="downgrade_free">Downgrade ke FREE</option>
+                                <option value="report">Laporkan Masalah</option>
+                                <option value="other">Lainnya</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-black border-l-4 border-black">▼</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">&gt; Pesan</label>
+                        <textarea id="contact_pesan" rows="3" placeholder="Tuliskan pesan atau alasanmu di sini..."
+                            class="w-full px-4 py-3 bg-white border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] outline-none font-bold text-black placeholder-gray-400 text-sm resize-none"></textarea>
+                    </div>
+
+                    <?php if (!empty($turnstile_site_key)): ?>
+                        <div class="cf-turnstile" id="contact-turnstile" data-sitekey="<?= esc($turnstile_site_key) ?>"></div>
+                    <?php else: ?>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">&gt; Verifikasi CAPTCHA</label>
+                            <div class="flex items-center gap-2 mb-2">
+                                <img id="contact-captcha-img" src="" alt="CAPTCHA" class="border-2 border-black bg-gray-100 h-14 w-[180px] object-contain">
+                                <button type="button" onclick="refreshContactCaptcha()" class="px-3 py-3 bg-gray-200 hover:bg-black hover:text-white border-2 border-black font-pixel text-[8px] uppercase">REFRESH</button>
+                            </div>
+                            <input type="text" id="contact_captcha_code" maxlength="5" autocomplete="off" placeholder="KETIK 5 KODE DI ATAS"
+                                class="w-full px-4 py-3 bg-white border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] outline-none font-bold text-black uppercase tracking-widest placeholder-gray-400 text-sm">
+                        </div>
+                    <?php endif; ?>
+
+                    <div class="flex gap-3 pt-2">
+                        <button type="button" onclick="closeContactModal()" class="w-1/3 bg-gray-300 hover:bg-gray-400 border-4 border-black text-black font-pixel text-[9px] py-4 uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-none">
+                            BATAL
+                        </button>
+                        <button type="button" id="contactSubmitBtn" onclick="submitContact()" class="w-2/3 bg-black hover:bg-blue-700 border-4 border-black text-white font-pixel text-[9px] py-4 uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-none">
+                            KIRIM &gt;&gt; ADMIN
+                        </button>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <!-- Body: Success -->
@@ -943,17 +971,38 @@
             URL.revokeObjectURL(url);
         }
 
+        function refreshContactCaptcha() {
+            const img = document.getElementById('contact-captcha-img');
+            if (img) img.src = '<?= base_url('captcha/contact') ?>?t=' + Date.now();
+            const capInput = document.getElementById('contact_captcha_code');
+            if (capInput) capInput.value = '';
+        }
+
+        function syncCsrfFields(newToken) {
+            if (!newToken) return;
+            csrfHash = newToken;
+            document.querySelectorAll('input[name="' + csrfName + '"]').forEach((el) => {
+                el.value = newToken;
+            });
+        }
+
         function openContactModal() {
             document.getElementById('contactModal').classList.remove('hidden');
             document.getElementById('contactModal').classList.add('flex');
             document.getElementById('contactFormBody').classList.remove('hidden');
             document.getElementById('contactSuccessBody').classList.add('hidden');
-            document.getElementById('contactErrorBox').classList.add('hidden');
+
+            const errBox = document.getElementById('contactErrorBox');
+            if (errBox) errBox.classList.add('hidden');
 
             const btn = document.getElementById('contactSubmitBtn');
-            btn.textContent = 'KIRIM >> ADMIN';
-            btn.disabled = false;
-            document.getElementById('contact_pesan').value = '';
+            if (btn) {
+                btn.textContent = 'KIRIM >> ADMIN';
+                btn.disabled = false;
+            }
+            const pesanEl = document.getElementById('contact_pesan');
+            if (pesanEl) pesanEl.value = '';
+            refreshContactCaptcha();
             document.body.style.overflow = 'hidden';
         }
 
@@ -968,6 +1017,9 @@
             const email   = document.getElementById('contact_email').value.trim();
             const jenis   = document.getElementById('contact_jenis').value;
             const pesan   = document.getElementById('contact_pesan').value.trim();
+            const trap    = document.getElementById('contact_website_url')?.value || '';
+            const capCode = document.getElementById('contact_captcha_code')?.value.trim() || '';
+            const tsResp  = document.querySelector('#contactFormBody input[name="cf-turnstile-response"]')?.value || '';
             const errBox  = document.getElementById('contactErrorBox');
             const btn     = document.getElementById('contactSubmitBtn');
 
@@ -988,20 +1040,24 @@
                 body.append('email', email);
                 body.append('jenis', jenis);
                 body.append('pesan', pesan);
+                body.append('website_url', trap);
+                if (capCode) body.append('captcha_code', capCode);
+                if (tsResp) body.append('cf-turnstile-response', tsResp);
 
                 const res = await fetch('<?= base_url('kirim-request') ?>', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
                     body: body.toString()
                 });
                 const data = await res.json();
-                if (data.csrf_token) csrfHash = data.csrf_token;
+                if (data.csrf_token) syncCsrfFields(data.csrf_token);
 
                 if (!res.ok || data.status !== 'ok') {
                     errBox.textContent = data.message || 'Gagal mengirim permintaan.';
                     errBox.classList.remove('hidden');
                     btn.textContent = 'KIRIM >> ADMIN';
                     btn.disabled = false;
+                    refreshContactCaptcha();
                     return;
                 }
 
@@ -1013,6 +1069,7 @@
                 errBox.classList.remove('hidden');
                 btn.textContent = 'KIRIM >> ADMIN';
                 btn.disabled = false;
+                refreshContactCaptcha();
             }
         }
 

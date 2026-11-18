@@ -8,6 +8,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <?php if (!empty($turnstile_site_key)): ?>
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <?php endif; ?>
     <style>
         .font-pixel { font-family: 'Press Start 2P', cursive; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
@@ -30,18 +33,22 @@
             </div>
         <?php endif; ?>
 
-        <?php if(session()->getFlashdata('error')): ?>
+        <?php $loginErrorMsg = $form_error ?? session()->getFlashdata('error'); ?>
+        <?php if(!empty($loginErrorMsg)): ?>
             <div class="bg-red-600 border-2 border-black text-white px-4 py-3 shadow-[4px_4px_0px_rgba(0,0,0,1)] mb-6 text-sm text-center font-bold uppercase animate-pulse">
-                [!] <?= esc(session()->getFlashdata('error')) ?>
+                [!] <?= esc($loginErrorMsg) ?>
             </div>
         <?php endif; ?>
         
         <form id="form-login" action="<?= base_url('auth/process') ?>" method="POST" class="space-y-6">
             <?= csrf_field() ?>
+            <div class="hidden" aria-hidden="true">
+                <input type="text" name="website_url" tabindex="-1" autocomplete="off" value="">
+            </div>
 
             <div>
                 <label for="email" class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">> EMAIL ADDRESS</label>
-                <input type="email" id="email" name="email" required placeholder="contoh@gmail.com"
+                <input type="email" id="email" name="email" required value="<?= esc($old_email ?? old('email')) ?>" placeholder="contoh@gmail.com"
                     class="w-full px-4 py-3 bg-white text-black border-2 border-black focus:outline-none focus:bg-gray-100 font-bold placeholder-gray-400">
             </div>
 
@@ -56,6 +63,27 @@
                     class="w-full px-4 py-3 bg-white text-black border-2 border-black focus:outline-none focus:bg-gray-100 font-bold placeholder-gray-400">
             </div>
 
+            <?php if (!empty($show_captcha)): ?>
+                <?php if (!empty($turnstile_site_key)): ?>
+                    <div class="cf-turnstile" data-sitekey="<?= esc($turnstile_site_key) ?>"></div>
+                <?php else: ?>
+                    <div>
+                        <label for="login_captcha_code" class="block text-[10px] font-bold text-red-700 uppercase tracking-widest mb-2">> VERIFIKASI KEAMANAN</label>
+                        <div class="flex items-center gap-2 mb-2">
+                            <img id="login-captcha-img" src="<?= base_url('captcha/login?t=' . time()) ?>" alt="CAPTCHA"
+                                class="border-2 border-black bg-gray-100 h-14 w-[180px] object-contain">
+                            <button type="button" onclick="document.getElementById('login-captcha-img').src='<?= base_url('captcha/login') ?>?t='+Date.now()"
+                                class="px-3 py-3 bg-gray-200 hover:bg-black hover:text-white border-2 border-black font-pixel text-[8px] uppercase">
+                                REFRESH
+                            </button>
+                        </div>
+                        <input type="text" id="login_captcha_code" name="captcha_code" required maxlength="5" autocomplete="off"
+                            placeholder="KETIK 5 KODE DI ATAS"
+                            class="w-full px-4 py-3 bg-white text-black border-2 border-black focus:outline-none focus:bg-gray-100 font-bold uppercase tracking-widest placeholder-gray-400">
+                    </div>
+                <?php endif; ?>
+            <?php endif; ?>
+
             <button type="submit" 
                 class="w-full bg-blue-600 hover:bg-blue-800 text-white font-pixel text-[10px] px-6 py-4 border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-none flex justify-center items-center gap-2 mt-4">
                 LOGIN
@@ -64,6 +92,9 @@
 
         <form id="form-change-pwd" action="<?= base_url('auth/changePassword') ?>" method="POST" class="space-y-5 hidden">
             <?= csrf_field() ?>
+            <div class="hidden" aria-hidden="true">
+                <input type="text" name="website_url" tabindex="-1" autocomplete="off" value="">
+            </div>
 
             <div class="border-b-2 border-dashed border-gray-400 pb-3 flex justify-between items-center">
                 <span class="font-pixel text-[10px] text-black uppercase">&gt; GANTI KATA SANDI</span>

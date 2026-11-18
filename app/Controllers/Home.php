@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Libraries\SecurityGuard;
 use App\Libraries\XonApiService;
 use App\Models\SearchHistoryModel;
 use Midtrans\Config;
@@ -54,14 +55,17 @@ class Home extends BaseController
 
     public function cekEmail()
     {
-        $session   = session();
-        $throttler = \Config\Services::throttler();
-        $ipHash    = md5((string) $this->request->getIPAddress());
+        $session = session();
+        $guard   = new SecurityGuard();
+        $ipKey   = $guard->getIpKey($this->request);
 
-        if ($throttler->check('cek_email_' . $ipHash, 15, MINUTE) === false) {
-            return redirect()
-                ->back()
-                ->with('error', 'Terlalu banyak permintaan dalam waktu singkat. Mohon tunggu sebentar.');
+        $limit = $guard->hitBucket('cek_email_ip', $ipKey, 10, 60, true, $ipKey);
+        if (!$limit['allowed']) {
+            return $guard->tooManyRequestsResponse(
+                $this->request,
+                'Terlalu banyak permintaan pengecekan email dalam waktu singkat.',
+                $limit['retry_after']
+            );
         }
 
         $is_logged_in = $session->get('logged_in');
@@ -166,32 +170,70 @@ class Home extends BaseController
     public function kirimRequest()
     {
         $session = session();
-        $nama    = trim((string) $this->request->getPost('nama'));
-        $email   = strtolower(trim((string) $this->request->getPost('email')));
-        $jenis   = trim((string) $this->request->getPost('jenis'));
-        $pesan   = trim((string) $this->request->getPost('pesan'));
+        $guard   = new SecurityGuard();
+        $ipKey   = $guard->getIpKey($this->request);
+
+        if (trim((string) $this->request->getPost('website_url')) !== '') {
+            $guard->recordStrike($ipKey);
+            return $guard->tooManyRequestsResponse($this->request, 'Permintaan ditolak (deteksi bot).', 120, true);
+        }
+
+        if (!$session->get('logged_in')) {
+            return $this->response->setStatusCode(401)->setJSON([
+                'status'     => 'error',
+                'message'    => 'Silakan login terlebih dahulu sebelum mengirim permintaan ke Admin.',
+                'csrf_token' => csrf_hash(),
+            ]);
+        }
+
+        $userId   = (int) $session->get('id');
+        $burstLim = $guard->hitBucket('contact_ip_10m', $ipKey, 6, 600, true, $ipKey);
+        if (!$burstLim['allowed']) {
+            return $guard->tooManyRequestsResponse(
+                $this->request,
+                'Terlalu banyak percobaan pengiriman dalam waktu singkat.',
+                $burstLim['retry_after'],
+                true
+            );
+        }
+
+        $shortLim = $guard->checkDbQuota('contact_req', $ipKey, 3, 600, $userId);
+        if (!$shortLim['allowed']) {
+            return $guard->tooManyRequestsResponse(
+                $this->request,
+                'Maksimal 3 pesan dapat dikirim setiap 10 menit.',
+                $shortLim['retry_after'],
+                true
+            );
+        }
+
+        $dailyLim = $guard->checkDbQuota('contact_req', $ipKey, 5, 86400, $userId);
+        if (!$dailyLim['allowed']) {
+            return $guard->tooManyRequestsResponse(
+                $this->request,
+                'Batas pengiriman pesan harian tercapai (maks 5 permintaan / 24 jam).',
+                $dailyLim['retry_after'],
+                true
+            );
+        }
+
+        if (!$guard->verifyHumanChallenge('contact', $this->request)) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'status'     => 'error',
+                'message'    => 'Kode verifikasi (CAPTCHA) salah atau kedaluwarsa.',
+                'csrf_token' => csrf_hash(),
+            ]);
+        }
+
+        $nama  = mb_substr(trim((string) $this->request->getPost('nama')), 0, 100);
+        $email = mb_substr(strtolower(trim((string) $this->request->getPost('email'))), 0, 150);
+        $jenis = trim((string) $this->request->getPost('jenis'));
+        $pesan = mb_substr(trim((string) $this->request->getPost('pesan')), 0, 1000);
 
         if ($nama === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return $this->response->setStatusCode(400)->setJSON([
                 'status'     => 'error',
                 'message'    => 'Nama dan alamat email yang valid wajib diisi.',
-                'csrf_token' => csrf_hash(),
-            ]);
-        }
-
-        $userId = $session->get('logged_in') ? (int) $session->get('id') : null;
-        if (!$userId) {
-            $userModel = new \App\Models\UserModel();
-            $foundUser = $userModel->where('email', $email)->first();
-            if ($foundUser) {
-                $userId = (int) $foundUser['id'];
-            }
-        }
-
-        if (!$userId) {
-            return $this->response->setStatusCode(401)->setJSON([
-                'status'     => 'error',
-                'message'    => 'Silakan login atau gunakan email akun yang sudah terdaftar.',
                 'csrf_token' => csrf_hash(),
             ]);
         }
@@ -214,6 +256,8 @@ class Home extends BaseController
             'updated_at'    => date('Y-m-d H:i:s'),
         ]);
 
+        $guard->recordDbHit('contact_req', $ipKey, $userId);
+
         return $this->response->setJSON([
             'status'     => 'ok',
             'message'    => 'Permintaan Anda berhasil dikirim ke Admin.',
@@ -226,6 +270,19 @@ class Home extends BaseController
      */
     public function breachTrends()
     {
+        $guard = new SecurityGuard();
+        $ipKey = $guard->getIpKey($this->request);
+
+        $limit = $guard->hitBucket('trends_ip', $ipKey, 20, 60, true, $ipKey);
+        if (!$limit['allowed']) {
+            return $guard->tooManyRequestsResponse(
+                $this->request,
+                'Terlalu banyak permintaan API statistik.',
+                $limit['retry_after'],
+                true
+            );
+        }
+
         $xonService = new XonApiService();
         $metrics    = $xonService->getGlobalMetrics();
 
@@ -241,10 +298,12 @@ class Home extends BaseController
     {
         $xonService ??= new XonApiService();
         $metrics = $xonService->getGlobalMetrics();
+        $guard   = new SecurityGuard();
 
         return [
-            'global_metrics' => $metrics,
-            'statistik'      => [
+            'global_metrics'     => $metrics,
+            'turnstile_site_key' => $guard->isTurnstileEnabled() ? $guard->getTurnstileSiteKey() : '',
+            'statistik'          => [
                 'sumber_aktif'      => number_format((int) ($metrics['breaches_count'] ?? 0)),
                 'tingkat_kebocoran' => $metrics['yoy_diff_pct'] ?? '+0%',
                 'total_akun'        => $metrics['breaches_records_short'] ?? '0',
@@ -255,13 +314,14 @@ class Home extends BaseController
 
     public function upgrade()
     {
-        $session     = session();
-        $isLoggedIn  = (bool) $session->get('logged_in');
-        $currentPlan = 'free';
-        $expireDate  = null;
-        $pendingPlan = null;
-        $usageCount  = (int) ($session->get('guest_usage_count') ?? 0);
-        $usageLimit  = 2;
+        $session      = session();
+        $guard        = new SecurityGuard();
+        $isLoggedIn   = (bool) $session->get('logged_in');
+        $currentPlan  = 'free';
+        $expireDate   = null;
+        $pendingPlan  = null;
+        $usageCount   = $this->getGuestUsageCount();
+        $usageLimit   = 2;
         $transactions = [];
 
         if ($isLoggedIn) {
@@ -295,8 +355,9 @@ class Home extends BaseController
             'pending_plan' => $pendingPlan,
             'usage_count'  => $usageCount,
             'usage_limit'  => $usageLimit,
-            'transactions' => $transactions,
-            'prices'       => self::PLAN_PRICES,
+            'transactions'       => $transactions,
+            'prices'             => self::PLAN_PRICES,
+            'turnstile_site_key' => $guard->isTurnstileEnabled() ? $guard->getTurnstileSiteKey() : '',
         ]);
     }
 
@@ -399,18 +460,24 @@ class Home extends BaseController
     {
         $session    = session();
         $sessionCnt = (int) ($session->get('guest_usage_count') ?? 0);
-        $cacheKey   = 'guest_quota_' . md5($this->request->getIPAddress() . '_' . date('Y-m-d'));
+        $guard      = new SecurityGuard();
+        $ipKey      = $guard->getIpKey($this->request);
+        $cacheKey   = 'guest_quota_' . $ipKey . '_' . date('Y-m-d');
         $ipCnt      = (int) (cache()->get($cacheKey) ?? 0);
+        $dbInfo     = $guard->checkDbQuota('guest_check', $ipKey, 2, 86400);
 
-        return max($sessionCnt, $ipCnt);
+        return max($sessionCnt, $ipCnt, (int) ($dbInfo['count'] ?? 0));
     }
 
     private function incrementGuestUsageCount(int $currentCount): void
     {
         $next     = $currentCount + 1;
-        $cacheKey = 'guest_quota_' . md5($this->request->getIPAddress() . '_' . date('Y-m-d'));
+        $guard    = new SecurityGuard();
+        $ipKey    = $guard->getIpKey($this->request);
+        $cacheKey = 'guest_quota_' . $ipKey . '_' . date('Y-m-d');
         session()->set('guest_usage_count', $next);
         cache()->save($cacheKey, $next, 86400);
+        $guard->recordDbHit('guest_check', $ipKey);
     }
 
     public function cancelUpgrade($id_transaksi)

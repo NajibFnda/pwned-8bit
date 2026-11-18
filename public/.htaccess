@@ -11,6 +11,16 @@ Options -Indexes
 	Options +FollowSymlinks
 	RewriteEngine On
 
+	# Edge anti-DoS & scanner filtering before spawning PHP
+	RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK|DELETE|PUT|CONNECT)$ [NC]
+	RewriteRule .* - [F,L]
+
+	RewriteCond %{HTTP:Content-Length} ^[0-9]{7,}$
+	RewriteRule .* - [F,L]
+
+	RewriteCond %{HTTP_USER_AGENT} (sqlmap|nikto|nuclei|masscan|acunetix|dirbuster|gobuster|wpscan|zgrab|nessus|havij) [NC]
+	RewriteRule .* - [F,L]
+
 	# If you installed CodeIgniter in a subfolder, you will need to
 	# change the following line to match the subfolder you need.
 	# http://httpd.apache.org/docs/current/mod/mod_rewrite.html#rewritebase

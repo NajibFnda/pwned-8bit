@@ -2,6 +2,7 @@
 
 namespace Config;
 
+use App\Filters\DdosGuardFilter;
 use CodeIgniter\Config\Filters as BaseFilters;
 use CodeIgniter\Filters\Cors;
 use CodeIgniter\Filters\CSRF;
@@ -26,6 +27,7 @@ class Filters extends BaseFilters
      */
     public array $aliases = [
         'csrf'          => CSRF::class,
+        'ddosguard'     => DdosGuardFilter::class,
         'toolbar'       => DebugToolbar::class,
         'honeypot'      => Honeypot::class,
         'invalidchars'  => InvalidChars::class,
@@ -72,9 +74,10 @@ class Filters extends BaseFilters
      */
     public array $globals = [
         'before' => [
+            'ddosguard',
             // 'honeypot',
             'csrf' => ['except' => ['midtrans/webhook']],
-            // 'invalidchars',
+            'invalidchars',
         ],
         'after' => [
             // 'honeypot',

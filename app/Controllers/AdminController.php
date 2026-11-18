@@ -20,14 +20,24 @@ public function index()
         }
 
         $transactionModel = new \App\Models\TransactionModel();
-        
-        $filter_paket = $this->request->getGet('paket'); 
-        
-        if ($filter_paket && in_array($filter_paket, ['free', 'plus', 'pro'])) {
-            $users = $this->userModel->where('subscription_plan', $filter_paket)->findAll();
-        } else {
-            $users = $this->userModel->findAll();
+
+        $filter_paket = $this->request->getGet('paket');
+        $search_q     = trim((string) $this->request->getGet('q'));
+
+        $builder = $this->userModel;
+        if ($filter_paket && in_array($filter_paket, ['free', 'plus', 'pro'], true)) {
+            $builder = $builder->where('subscription_plan', $filter_paket);
         }
+        if ($search_q !== '') {
+            $builder = $builder->groupStart()
+                ->like('nama', $search_q)
+                ->orLike('email', $search_q)
+                ->groupEnd();
+        }
+
+        $users      = $builder->orderBy('id', 'DESC')->paginate(25, 'users');
+        $pager      = $this->userModel->pager;
+        $totalUsers = (new UserModel())->countAllResults();
 
         $db = \Config\Database::connect();
         $query = $db->query("SELECT SUM(harga) as total_uang FROM transactions WHERE status IN ('paid', 'settlement')");
@@ -35,12 +45,15 @@ public function index()
         $total_pendapatan = $hasil->total_uang ?? 0;
 
         $data = [
-            'title'             => 'Manajemen Pengguna', 
-            'active'            => 'users', 
+            'title'             => 'Manajemen Pengguna',
+            'active'            => 'users',
             'users'             => $users,
+            'pager'             => $pager,
+            'total_users'       => $totalUsers,
+            'search_q'          => $search_q,
             'real_transactions' => $transactionModel->getTransactionsWithUser(),
             'total_pendapatan'  => $total_pendapatan,
-            'filter_aktif'      => $filter_paket
+            'filter_aktif'      => $filter_paket,
         ];
 
         return view('admin/user_list', $data);
@@ -49,6 +62,88 @@ public function index()
     public function users()
     {
         return $this->index();
+    }
+
+    public function deleteUser($id)
+    {
+        $session = session();
+        if ($session->get('role') !== 'admin') {
+            return redirect()->to('/')->with('error', 'Akses ditolak!');
+        }
+
+        $targetId = (int) $id;
+        if ($targetId === (int) $session->get('id')) {
+            return redirect()->to('/admin')->with('pesan', 'Akun admin yang sedang aktif tidak bisa dihapus.');
+        }
+
+        $target = $this->userModel->find($targetId);
+        if (!$target) {
+            return redirect()->to('/admin')->with('pesan', 'Pengguna tidak ditemukan.');
+        }
+        if (($target['role'] ?? 'user') === 'admin') {
+            return redirect()->to('/admin')->with('pesan', 'Akun admin tidak diizinkan dihapus.');
+        }
+
+        $this->deleteUserRecords([$targetId]);
+
+        return redirect()->to('/admin')->with('pesan', 'Akun #' . $targetId . ' (' . $target['email'] . ') berhasil dihapus.');
+    }
+
+    public function cleanupSpamUsers()
+    {
+        $session = session();
+        if ($session->get('role') !== 'admin') {
+            return redirect()->to('/')->with('error', 'Akses ditolak!');
+        }
+
+        $db         = \Config\Database::connect();
+        $candidates = $db->table('users u')
+            ->select('u.id, u.nama, u.email')
+            ->where('u.role', 'user')
+            ->where('u.subscription_plan', 'free')
+            ->where("NOT EXISTS (SELECT 1 FROM transactions t WHERE t.user_id = u.id)", null, false)
+            ->get()
+            ->getResultArray();
+
+        $spamIds = [];
+        foreach ($candidates as $row) {
+            $nama  = (string) ($row['nama'] ?? '');
+            $email = (string) ($row['email'] ?? '');
+            $local = explode('@', $email)[0] ?? '';
+
+            // Match automated bot strings: random alphanumeric 10-16 char username & random alnum local-part without spaces
+            $isRandomName  = (bool) preg_match('/^[A-Za-z0-9]{10,16}$/', $nama);
+            $isRandomEmail = (bool) preg_match('/^[a-z0-9]{10,16}$/', $local);
+            $hasBotDigits  = (bool) (preg_match('/[0-9]/', $nama) || preg_match('/[0-9]/', $local));
+
+            if ($isRandomName && $isRandomEmail && $hasBotDigits) {
+                $spamIds[] = (int) $row['id'];
+            }
+        }
+
+        if (empty($spamIds)) {
+            return redirect()->to('/admin')->with('pesan', 'Tidak ada akun spam bot yang terdeteksi.');
+        }
+
+        $this->deleteUserRecords($spamIds);
+
+        return redirect()->to('/admin')->with('pesan', count($spamIds) . ' akun spam bot berhasil dibersihkan.');
+    }
+
+    private function deleteUserRecords(array $userIds): void
+    {
+        $userIds = array_values(array_filter(array_map('intval', $userIds), static fn($v) => $v > 0));
+        if (empty($userIds)) {
+            return;
+        }
+
+        $db = \Config\Database::connect();
+        foreach (array_chunk($userIds, 200) as $chunk) {
+            $db->table('user_requests')->whereIn('user_id', $chunk)->delete();
+            $db->table('search_history')->whereIn('user_id', $chunk)->delete();
+            $db->table('transactions')->whereIn('user_id', $chunk)->delete();
+            $db->table('users')->whereIn('id', $chunk)->delete();
+        }
     }
 
     public function updateSubscription($id)

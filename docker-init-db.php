@@ -96,6 +96,17 @@ $queries = [
         PRIMARY KEY (`id`),
         KEY `user_id` (`user_id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci",
+
+    "CREATE TABLE IF NOT EXISTS `rate_limits` (
+        `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+        `action` varchar(40) NOT NULL,
+        `ip_hash` char(32) NOT NULL,
+        `actor_id` int(10) unsigned DEFAULT NULL,
+        `created_at` datetime NOT NULL,
+        PRIMARY KEY (`id`),
+        KEY `idx_rate_lookup` (`action`,`ip_hash`,`created_at`),
+        KEY `idx_rate_actor` (`action`,`actor_id`,`created_at`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci",
 ];
 
 foreach ($queries as $sql) {
