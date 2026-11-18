@@ -236,6 +236,208 @@
                 </div>
             </div>
 
+            <!-- Auto Alert System (Email Monitoring) -->
+            <div id="auto-alert-section" class="bg-white border-4 border-black shadow-[6px_6px_0px_rgba(0,0,0,1)] scroll-mt-8">
+                <div class="px-6 py-4 bg-black text-white border-b-4 border-black flex flex-wrap justify-between items-center gap-3">
+                    <div>
+                        <h2 class="font-pixel text-xs uppercase text-white">&gt; AUTO ALERT SYSTEM (EMAIL)</h2>
+                        <p class="text-[10px] font-bold text-gray-300 uppercase mt-1">
+                            Pantau email secara berkala dan terima peringatan ke <span class="text-blue-300"><?= esc($user['email'] ?? '') ?></span> jika muncul kebocoran baru.
+                        </p>
+                    </div>
+                    <?php
+                        $mQuota    = (int) ($monitor_quota ?? 0);
+                        $mList     = $monitored_emails ?? [];
+                        $mLogs     = $alert_logs ?? [];
+                        $mCount    = count($mList);
+                        $acctEmail = (string) ($user['email'] ?? '');
+                        $acctAlreadyMonitored = false;
+                        foreach ($mList as $mm) {
+                            if (strtolower((string) ($mm['email'] ?? '')) === strtolower($acctEmail)) {
+                                $acctAlreadyMonitored = true;
+                                break;
+                            }
+                        }
+                    ?>
+                    <?php if ($mQuota > 0): ?>
+                        <span class="px-3 py-1.5 bg-blue-600 text-white border-2 border-white font-pixel text-[9px] uppercase">
+                            SLOT PANTAUAN: <?= $mCount ?> / <?= $mQuota ?> EMAIL
+                        </span>
+                    <?php else: ?>
+                        <span class="px-3 py-1.5 bg-yellow-300 text-black border-2 border-white font-pixel text-[9px] uppercase">
+                            [TERKUNCI - PLUS / PRO]
+                        </span>
+                    <?php endif; ?>
+                </div>
+
+                <div class="p-6 space-y-5">
+                    <?php if (session()->getFlashdata('monitor_success')): ?>
+                        <div class="bg-green-100 border-2 border-black text-green-900 px-4 py-2.5 text-xs font-bold uppercase">
+                            [OK] <?= esc(session()->getFlashdata('monitor_success')) ?>
+                        </div>
+                    <?php endif; ?>
+                    <?php if (session()->getFlashdata('monitor_error')): ?>
+                        <div class="bg-red-100 border-2 border-red-600 text-red-900 px-4 py-2.5 text-xs font-bold uppercase">
+                            [!] <?= esc(session()->getFlashdata('monitor_error')) ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($mQuota <= 0): ?>
+                        <div class="bg-yellow-50 border-4 border-black p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div class="space-y-1">
+                                <div class="font-pixel text-[10px] text-black uppercase">AKTIFKAN PEMANTAUAN KEBOCORAN OTOMATIS</div>
+                                <p class="text-xs font-bold text-gray-700 leading-relaxed">
+                                    Upgrade ke paket <span class="text-blue-700">PWNED PLUS</span> (pantau hingga 5 email) atau <span class="text-red-600">PWNED PRO</span> (hingga 25 email) untuk mendapatkan peringatan dini langsung ke email Anda setiap ada kebocoran data baru.
+                                </p>
+                            </div>
+                            <a href="<?= base_url('upgrade') ?>" class="bg-blue-600 hover:bg-blue-800 text-white font-pixel text-[9px] px-4 py-3 border-2 border-black uppercase shrink-0">
+                                UPGRADE SEKARANG &gt;&gt;
+                            </a>
+                        </div>
+                    <?php else: ?>
+                        <?php if (empty($otp_mailer_active)): ?>
+                            <div class="bg-yellow-100 border-2 border-black px-4 py-3 text-xs font-bold text-yellow-900 uppercase">
+                                [!] Pengirim email Brevo/SMTP belum diaktifkan oleh Admin. Pantauan tetap tersimpan, namun email notifikasi baru aktif setelah Admin mengaktifkan mailer.
+                            </div>
+                        <?php endif; ?>
+
+                        <div class="flex flex-col md:flex-row gap-3 items-stretch md:items-end justify-between border-b-2 border-dashed border-gray-300 pb-5">
+                            <form method="POST" action="<?= base_url('profile/monitor/add') ?>" class="flex-1 flex flex-col sm:flex-row gap-2">
+                                <?= csrf_field() ?>
+                                <input type="email" name="monitor_email" required placeholder="Masukkan email yang ingin dipantau..."
+                                    class="flex-1 px-3 py-2.5 bg-white border-4 border-black text-xs font-bold outline-none">
+                                <button type="submit" <?= ($mCount >= $mQuota) ? 'disabled' : '' ?>
+                                    class="bg-blue-600 hover:bg-blue-800 disabled:bg-gray-400 text-white font-pixel text-[9px] px-4 py-2.5 border-4 border-black uppercase shrink-0">
+                                    + PANTAU EMAIL
+                                </button>
+                            </form>
+
+                            <div class="flex flex-wrap gap-2">
+                                <?php if (!$acctAlreadyMonitored && $acctEmail !== '' && $mCount < $mQuota): ?>
+                                    <form method="POST" action="<?= base_url('profile/monitor/add') ?>">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="monitor_email" value="<?= esc($acctEmail) ?>">
+                                        <button type="submit" class="bg-white hover:bg-green-600 hover:text-white text-black font-pixel text-[9px] px-3 py-2.5 border-2 border-black uppercase">
+                                            + EMAIL AKUN INI
+                                        </button>
+                                    </form>
+                                <?php endif; ?>
+
+                                <?php if (!empty($otp_mailer_active)): ?>
+                                    <form method="POST" action="<?= base_url('profile/monitor/test-alert') ?>">
+                                        <?= csrf_field() ?>
+                                        <button type="submit" class="bg-black hover:bg-red-600 text-white font-pixel text-[9px] px-3 py-2.5 border-2 border-black uppercase">
+                                            KIRIM TEST ALERT
+                                        </button>
+                                    </form>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto border-2 border-black">
+                            <table class="w-full text-left text-xs text-black">
+                                <thead class="bg-gray-200 border-b-2 border-black uppercase font-bold">
+                                    <tr>
+                                        <th class="px-4 py-2.5 border-r-2 border-black">Email Dipantau</th>
+                                        <th class="px-4 py-2.5 border-r-2 border-black">Status Terakhir</th>
+                                        <th class="px-4 py-2.5 border-r-2 border-black">Dicek</th>
+                                        <th class="px-4 py-2.5 border-r-2 border-black">Alert Terakhir</th>
+                                        <th class="px-4 py-2.5 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y-2 divide-black font-bold">
+                                    <?php if (!empty($mList)): ?>
+                                        <?php foreach ($mList as $mon): ?>
+                                            <?php
+                                                $monStatus = (string) ($mon['last_status'] ?? 'pending');
+                                                $monBadge  = match ($monStatus) {
+                                                    'pwned' => 'bg-red-600 text-white',
+                                                    'safe'  => 'bg-green-600 text-white',
+                                                    'error' => 'bg-yellow-300 text-black',
+                                                    default => 'bg-gray-200 text-black',
+                                                };
+                                                $isOn = !empty($mon['is_active']);
+                                            ?>
+                                            <tr class="<?= $isOn ? 'hover:bg-gray-50' : 'bg-gray-100 opacity-75' ?>">
+                                                <td class="px-4 py-3 border-r-2 border-black font-mono text-blue-700">
+                                                    <?= esc($mon['email']) ?>
+                                                    <?php if (!$isOn): ?>
+                                                        <span class="ml-1 px-1.5 py-0.5 bg-gray-300 text-black border border-black text-[9px]">JEDA</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="px-4 py-3 border-r-2 border-black">
+                                                    <span class="<?= $monBadge ?> px-2 py-0.5 border border-black text-[9px] font-pixel uppercase">
+                                                        <?= strtoupper(esc($monStatus)) ?> (<?= (int) ($mon['last_breach_count'] ?? 0) ?>)
+                                                    </span>
+                                                    <?php if (!empty($mon['last_error'])): ?>
+                                                        <div class="text-[10px] text-red-600 mt-1"><?= esc($mon['last_error']) ?></div>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="px-4 py-3 border-r-2 border-black text-[11px] font-mono text-gray-600">
+                                                    <?= !empty($mon['last_checked_at']) ? esc(date('d M Y H:i', strtotime((string) $mon['last_checked_at']))) : 'Menunggu' ?>
+                                                </td>
+                                                <td class="px-4 py-3 border-r-2 border-black text-[11px] font-mono text-gray-600">
+                                                    <?= !empty($mon['last_alerted_at']) ? esc(date('d M Y H:i', strtotime((string) $mon['last_alerted_at']))) : 'Belum ada baru' ?>
+                                                </td>
+                                                <td class="px-4 py-3 text-center">
+                                                    <div class="flex items-center justify-center gap-1.5">
+                                                        <form method="POST" action="<?= base_url('profile/monitor/' . (int) $mon['id'] . '/check') ?>">
+                                                            <?= csrf_field() ?>
+                                                            <button type="submit" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-800 text-white border border-black text-[9px] font-pixel uppercase">
+                                                                CEK
+                                                            </button>
+                                                        </form>
+                                                        <form method="POST" action="<?= base_url('profile/monitor/' . (int) $mon['id'] . '/toggle') ?>">
+                                                            <?= csrf_field() ?>
+                                                            <button type="submit" class="px-2.5 py-1 bg-white hover:bg-yellow-300 text-black border border-black text-[9px] font-pixel uppercase">
+                                                                <?= $isOn ? 'JEDA' : 'AKTIF' ?>
+                                                            </button>
+                                                        </form>
+                                                        <form method="POST" action="<?= base_url('profile/monitor/' . (int) $mon['id'] . '/delete') ?>" onsubmit="return confirm('Hapus email ini dari daftar pantauan Auto Alert?');">
+                                                            <?= csrf_field() ?>
+                                                            <button type="submit" class="px-2.5 py-1 bg-white hover:bg-red-600 hover:text-white text-black border border-black text-[9px] font-pixel uppercase">
+                                                                HAPUS
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <tr>
+                                            <td colspan="5" class="px-6 py-6 text-center text-gray-500 uppercase">[!] Belum ada email dalam daftar pantauan. Tambahkan di atas!</td>
+                                        </tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <?php if (!empty($mLogs)): ?>
+                            <div class="border-t-2 border-dashed border-gray-300 pt-4">
+                                <div class="font-pixel text-[10px] text-black uppercase mb-2">&gt; RIWAYAT NOTIFIKASI KEBOCORAN TERKIRIM</div>
+                                <div class="space-y-2 max-h-44 overflow-y-auto pr-1">
+                                    <?php foreach ($mLogs as $al): ?>
+                                        <?php $okSent = ($al['delivery_status'] ?? '') === 'sent'; ?>
+                                        <div class="border-2 border-black p-2.5 bg-gray-50 flex flex-wrap justify-between items-center gap-2 text-[11px] font-bold">
+                                            <div>
+                                                <span class="font-mono text-blue-700"><?= esc($al['monitored_email']) ?></span>
+                                                <span class="text-red-600 ml-2">+<?= (int) ($al['new_count'] ?? 0) ?> INSIDEN BARU</span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-gray-500 font-mono"><?= esc(date('d M Y H:i', strtotime((string) $al['created_at']))) ?></span>
+                                                <span class="<?= $okSent ? 'bg-green-600 text-white' : 'bg-red-600 text-white' ?> px-1.5 py-0.5 border border-black text-[9px] font-pixel">
+                                                    <?= $okSent ? 'TERKIRIM' : 'GAGAL' ?>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+
             <!-- Tabel Riwayat Pengecekan Email Lengkap -->
             <div class="bg-white border-4 border-black shadow-[6px_6px_0px_rgba(0,0,0,1)]">
                 <div class="px-6 py-4 bg-gray-100 border-b-4 border-black flex flex-wrap justify-between items-center gap-3">

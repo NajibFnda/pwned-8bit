@@ -160,7 +160,7 @@
                                 </li>
                                 <li class="flex items-start gap-2">
                                     <span class="text-blue-600">[+]</span>
-                                    <span>AUTO ALERT SYSTEM (EMAIL)</span>
+                                    <span>AUTO ALERT SYSTEM (EMAIL - MAX 5)</span>
                                 </li>
                             </ul>
                         </div>
@@ -207,6 +207,10 @@
                                 <li class="flex items-start gap-2">
                                     <span class="text-red-500">[+]</span>
                                     <span>DEEP SEARCH DATA (PWD LOGS)</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <span class="text-red-500">[+]</span>
+                                    <span>AUTO ALERT SYSTEM (EMAIL - MAX 25)</span>
                                 </li>
                                 <li class="flex items-start gap-2">
                                     <span class="text-red-500">[+]</span>

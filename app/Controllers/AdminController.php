@@ -1,5 +1,6 @@
 <?php
 namespace App\Controllers;
+use App\Libraries\BreachAlertService;
 use App\Libraries\OtpMailerService;
 use App\Libraries\OtpService;
 use App\Libraries\RedeemService;
@@ -187,11 +188,19 @@ public function index()
             return;
         }
 
-        $db          = \Config\Database::connect();
-        $hasClaims   = $db->tableExists('redeem_claims');
+        $db            = \Config\Database::connect();
+        $hasClaims     = $db->tableExists('redeem_claims');
+        $hasMonitors   = $db->tableExists('monitored_emails');
+        $hasAlertLogs  = $db->tableExists('breach_alert_logs');
         foreach (array_chunk($userIds, 200) as $chunk) {
             if ($hasClaims) {
                 $db->table('redeem_claims')->whereIn('user_id', $chunk)->delete();
+            }
+            if ($hasMonitors) {
+                $db->table('monitored_emails')->whereIn('user_id', $chunk)->delete();
+            }
+            if ($hasAlertLogs) {
+                $db->table('breach_alert_logs')->whereIn('user_id', $chunk)->delete();
             }
             $db->table('user_requests')->whereIn('user_id', $chunk)->delete();
             $db->table('search_history')->whereIn('user_id', $chunk)->delete();
@@ -738,6 +747,151 @@ public function exportCSV()
         );
 
         return redirect()->to('/admin/otp-settings')->with('pesan', 'Test email OTP (' . $testCode . ') berhasil dikirim ke ' . $targetEmail . ' via ' . ($res['debug'] ?? 'OK') . '!');
+    }
+
+    public function autoAlerts()
+    {
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to('/')->with('error', 'Akses ditolak!');
+        }
+
+        $service  = new BreachAlertService();
+        $cfg      = $service->getSettings();
+        $overview = $service->getAdminOverview();
+
+        return view('admin/auto_alerts', [
+            'title'         => 'Auto Alert System',
+            'active'        => 'auto_alerts',
+            'cfg'           => $cfg,
+            'overview'      => $overview,
+            'cron_url'      => rtrim((string) base_url('cron/breach-alerts'), '/') . '?token=' . $cfg['cron_token'],
+        ]);
+    }
+
+    public function saveAutoAlertSettings()
+    {
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to('/')->with('error', 'Akses ditolak!');
+        }
+
+        $res = (new BreachAlertService())->saveSettings([
+            'enabled'        => $this->request->getPost('enabled'),
+            'interval_hours' => $this->request->getPost('interval_hours'),
+            'batch_size'     => $this->request->getPost('batch_size'),
+        ]);
+
+        (new SecurityGuard())->logSecurityEvent(
+            'ADMIN_UPDATE_AUTO_ALERT',
+            'info',
+            session()->get('email'),
+            $res['message'],
+            $this->request
+        );
+
+        return redirect()->to('/admin/auto-alerts')->with('pesan', $res['message']);
+    }
+
+    public function regenAutoAlertToken()
+    {
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to('/')->with('error', 'Akses ditolak!');
+        }
+
+        (new BreachAlertService())->regenerateCronToken();
+
+        (new SecurityGuard())->logSecurityEvent(
+            'ADMIN_REGEN_ALERT_TOKEN',
+            'warning',
+            session()->get('email'),
+            'Cron token Auto Alert diperbarui oleh Admin.',
+            $this->request
+        );
+
+        return redirect()->to('/admin/auto-alerts')->with('pesan', 'Token URL Cron baru berhasil dibuat. Perbarui URL di layanan cron eksternal Anda jika dipakai.');
+    }
+
+    public function runAutoAlertBatch()
+    {
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to('/')->with('error', 'Akses ditolak!');
+        }
+
+        $ignoreInterval = !empty($this->request->getPost('force_all'));
+        $summary        = (new BreachAlertService())->runDueChecks(10, $ignoreInterval);
+
+        if (!empty($summary['skipped_disabled'])) {
+            return redirect()->to('/admin/auto-alerts')->with('error_admin', 'Auto Alert scheduler sedang nonaktif. Aktifkan terlebih dahulu atau centang Cek Paksa.');
+        }
+
+        $msg = sprintf(
+            'Batch selesai — Dicek: %d email | Alert terkirim: %d | Alert gagal: %d | Error API: %d',
+            $summary['checked'],
+            $summary['alerts_sent'],
+            $summary['alerts_failed'],
+            $summary['api_errors']
+        );
+
+        (new SecurityGuard())->logSecurityEvent(
+            'ADMIN_RUN_AUTO_ALERT',
+            'info',
+            session()->get('email'),
+            $msg,
+            $this->request
+        );
+
+        return redirect()->to('/admin/auto-alerts')->with('pesan', $msg);
+    }
+
+    public function testAutoAlertEmail()
+    {
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to('/')->with('error', 'Akses ditolak!');
+        }
+
+        $targetEmail = strtolower(trim((string) $this->request->getPost('test_email')));
+        if ($targetEmail === '' || !filter_var($targetEmail, FILTER_VALIDATE_EMAIL)) {
+            return redirect()->to('/admin/auto-alerts')->with('error_admin', 'Masukkan alamat email tujuan uji coba yang valid.');
+        }
+
+        $sampleMonitored = strtolower(trim((string) $this->request->getPost('sample_monitored'))) ?: $targetEmail;
+        $res             = (new BreachAlertService())->sendTestAlertEmail($targetEmail, 'Admin PWNED', $sampleMonitored);
+
+        if (!$res['ok']) {
+            $dbg = !empty($res['debug']) ? ' (' . $res['debug'] . ')' : '';
+            return redirect()->to('/admin/auto-alerts')->with('error_admin', $res['message'] . $dbg);
+        }
+
+        (new SecurityGuard())->logSecurityEvent(
+            'ADMIN_TEST_AUTO_ALERT',
+            'info',
+            session()->get('email'),
+            'Simulasi email Auto Alert terkirim ke ' . $targetEmail,
+            $this->request
+        );
+
+        return redirect()->to('/admin/auto-alerts')->with('pesan', 'Simulasi Auto Alert berhasil dikirim ke ' . $targetEmail . ' via ' . ($res['debug'] ?? 'OK') . '!');
+    }
+
+    public function checkMonitorAdmin($id)
+    {
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to('/')->with('error', 'Akses ditolak!');
+        }
+
+        $res = (new BreachAlertService())->checkMonitorById((int) $id, null);
+        return redirect()->to('/admin/auto-alerts')
+            ->with($res['ok'] ? 'pesan' : 'error_admin', $res['message']);
+    }
+
+    public function deleteMonitorAdmin($id)
+    {
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to('/')->with('error', 'Akses ditolak!');
+        }
+
+        $res = (new BreachAlertService())->deleteMonitor(null, (int) $id);
+        return redirect()->to('/admin/auto-alerts')
+            ->with($res['ok'] ? 'pesan' : 'error_admin', $res['message']);
     }
 
     public function getNotifCount()

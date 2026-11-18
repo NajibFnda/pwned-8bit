@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Libraries\BreachAlertService;
 use App\Libraries\OtpMailerService;
 use App\Libraries\OtpService;
 use App\Libraries\RedeemService;
@@ -26,6 +27,7 @@ class Home extends BaseController
         $usage_count    = $this->getGuestUsageCount();
         $usage_limit    = 2;
         $recent_history = [];
+        $monitor_quota  = 0;
 
         if ($session->get('logged_in')) {
             $user    = $this->syncUserSessionPlan((int) $session->get('id'));
@@ -41,6 +43,7 @@ class Home extends BaseController
             $historyModel   = new SearchHistoryModel();
             $usage_count    = $historyModel->countUserSearchesToday($user_id);
             $recent_history = $historyModel->getRecentUniqueEmails($user_id, 5);
+            $monitor_quota  = (new BreachAlertService())->getMonitorQuota($paket, (string) ($user['role'] ?? 'user'));
         }
 
         $metricsData = $this->buildMetricsViewData();
@@ -52,6 +55,8 @@ class Home extends BaseController
             'usage_count'    => $usage_count, 
             'usage_limit'    => $usage_limit,
             'recent_history' => $recent_history,
+            'is_monitored'   => false,
+            'monitor_quota'  => $monitor_quota,
         ], $metricsData);
 
         return view('pwned_search', $data);
@@ -151,18 +156,33 @@ class Home extends BaseController
             $usage_count++;
         }
 
+        $alertService       = new BreachAlertService();
+        $autoAlertTriggered = false;
+        $isMonitored        = false;
+        $monitorQuota       = 0;
+
+        if ($is_logged_in) {
+            $syncRes            = $alertService->syncFromSearch($user_id, $emailInput, $apiResult);
+            $autoAlertTriggered = !empty($syncRes['alert_sent']);
+            $isMonitored        = $alertService->isEmailMonitoredByUser($user_id, $emailInput);
+            $monitorQuota       = $alertService->getMonitorQuota($paket ?? 'free', (string) ($user['role'] ?? 'user'));
+        }
+
         $recent_history = $is_logged_in ? $historyModel->getRecentUniqueEmails($user_id, 5) : [];
         $metricsData    = $this->buildMetricsViewData($xonService);
 
         $data = array_merge([
-            'status'         => $status,
-            'email'          => $emailInput,
-            'details'        => $details,
-            'total_breach'   => $totalBreach,
-            'api_message'    => $apiMessage,
-            'usage_count'    => $usage_count,
-            'usage_limit'    => $usage_limit,
-            'recent_history' => $recent_history,
+            'status'               => $status,
+            'email'                => $emailInput,
+            'details'              => $details,
+            'total_breach'         => $totalBreach,
+            'api_message'          => $apiMessage,
+            'usage_count'          => $usage_count,
+            'usage_limit'          => $usage_limit,
+            'recent_history'       => $recent_history,
+            'is_monitored'         => $isMonitored,
+            'monitor_quota'        => $monitorQuota,
+            'auto_alert_triggered' => $autoAlertTriggered,
         ], $metricsData);
 
         return view('pwned_search', $data);
@@ -486,6 +506,9 @@ class Home extends BaseController
             ->get()
             ->getResultArray();
 
+        $alertService = new BreachAlertService();
+        $monitorQuota = $alertService->getMonitorQuota($currentPlan, (string) ($user['role'] ?? 'user'));
+
         return view('v_profile', [
             'user'              => $user,
             'current_plan'      => $currentPlan,
@@ -497,6 +520,9 @@ class Home extends BaseController
             'redeem_claims'     => $redeemClaims,
             'otp_mailer_active' => $mailer->isConfigured(),
             'otp_cooldown'      => !empty($user['email']) ? $otpService->getResendCooldownRemaining('verify_email', (string) $user['email']) : 0,
+            'monitor_quota'     => $monitorQuota,
+            'monitored_emails'  => $alertService->listUserMonitors($userId),
+            'alert_logs'        => $alertService->listUserAlertLogs($userId, 10),
         ]);
     }
 
@@ -669,6 +695,187 @@ class Home extends BaseController
         $db->table('search_history')->where('user_id', $userId)->delete();
 
         return redirect()->to('/profile')->with('history_success', 'Semua riwayat pengecekan email berhasil dibersihkan.');
+    }
+
+    /**
+     * Tambahkan alamat email ke daftar pantauan Auto Alert milik pengguna (PLUS/PRO/Admin).
+     */
+    public function addMonitorEmail()
+    {
+        $session = session();
+        if (!$session->get('logged_in')) {
+            return redirect()->to('/login')->with('error', 'Silakan login terlebih dahulu.');
+        }
+
+        $guard  = new SecurityGuard();
+        $ipKey  = $guard->getIpKey($this->request);
+        $userId = (int) $session->get('id');
+        $limit  = $guard->hitBucket('monitor_add', $ipKey . '_' . $userId, 10, 300, true, $ipKey);
+        if (!$limit['allowed']) {
+            return $guard->tooManyRequestsResponse($this->request, 'Terlalu banyak penambahan pantauan. Coba sebentar lagi.', $limit['retry_after']);
+        }
+
+        $user         = $this->syncUserSessionPlan($userId);
+        $emailTarget  = strtolower(trim((string) $this->request->getPost('monitor_email')));
+        $alertService = new BreachAlertService();
+
+        $res = $alertService->addMonitor(
+            $userId,
+            $emailTarget,
+            (string) ($user['subscription_plan'] ?? 'free'),
+            (string) ($user['role'] ?? 'user')
+        );
+
+        if (!$res['ok']) {
+            return redirect()->to('/profile#auto-alert-section')->with('monitor_error', $res['message']);
+        }
+
+        $guard->logSecurityEvent('AUTO_ALERT_ADD', 'info', (string) ($user['email'] ?? ''), 'Menambahkan pantauan: ' . $emailTarget, $this->request);
+        return redirect()->to('/profile#auto-alert-section')->with('monitor_success', $res['message']);
+    }
+
+    /**
+     * Aktifkan atau jeda pemantauan satu email milik user aktif.
+     */
+    public function toggleMonitorEmail($id)
+    {
+        $session = session();
+        if (!$session->get('logged_in')) {
+            return redirect()->to('/login');
+        }
+
+        $res = (new BreachAlertService())->toggleMonitor((int) $session->get('id'), (int) $id);
+        return redirect()->to('/profile#auto-alert-section')
+            ->with($res['ok'] ? 'monitor_success' : 'monitor_error', $res['message']);
+    }
+
+    /**
+     * Cek manual satu email pantauan milik user sekarang juga.
+     */
+    public function checkMonitorEmailNow($id)
+    {
+        $session = session();
+        if (!$session->get('logged_in')) {
+            return redirect()->to('/login');
+        }
+
+        $guard  = new SecurityGuard();
+        $ipKey  = $guard->getIpKey($this->request);
+        $userId = (int) $session->get('id');
+        $limit  = $guard->hitBucket('monitor_check', $ipKey . '_' . $userId, 6, 300, true, $ipKey);
+        if (!$limit['allowed']) {
+            return redirect()->to('/profile#auto-alert-section')->with('monitor_error', 'Terlalu sering mengecek manual. Tunggu ' . $limit['retry_after'] . ' detik.');
+        }
+
+        $this->syncUserSessionPlan($userId);
+        $res = (new BreachAlertService())->checkMonitorById((int) $id, $userId);
+
+        return redirect()->to('/profile#auto-alert-section')
+            ->with($res['ok'] ? 'monitor_success' : 'monitor_error', $res['message']);
+    }
+
+    /**
+     * Hapus satu email dari daftar pantauan Auto Alert user aktif.
+     */
+    public function deleteMonitorEmail($id)
+    {
+        $session = session();
+        if (!$session->get('logged_in')) {
+            return redirect()->to('/login');
+        }
+
+        $res = (new BreachAlertService())->deleteMonitor((int) $session->get('id'), (int) $id);
+        return redirect()->to('/profile#auto-alert-section')
+            ->with($res['ok'] ? 'monitor_success' : 'monitor_error', $res['message']);
+    }
+
+    /**
+     * Kirim email uji coba Auto Alert ke alamat email akun user yang sedang login.
+     */
+    public function sendMonitorTestAlert()
+    {
+        $session = session();
+        if (!$session->get('logged_in')) {
+            return redirect()->to('/login');
+        }
+
+        $userId       = (int) $session->get('id');
+        $user         = $this->syncUserSessionPlan($userId);
+        $alertService = new BreachAlertService();
+
+        if (!$alertService->isUserEligibleForAutoAlert($user)) {
+            return redirect()->to('/profile#auto-alert-section')->with('monitor_error', 'Fitur uji Auto Alert hanya tersedia untuk paket PLUS, PRO, atau Admin.');
+        }
+
+        $mailer = new OtpMailerService();
+        if (!$mailer->isConfigured()) {
+            return redirect()->to('/profile#auto-alert-section')->with('monitor_error', 'Pengirim email Brevo/SMTP belum diaktifkan oleh Admin.');
+        }
+
+        $guard = new SecurityGuard();
+        $ipKey = $guard->getIpKey($this->request);
+        $limit = $guard->hitBucket('monitor_test_alert', $ipKey . '_' . $userId, 1, 120, false);
+        if (!$limit['allowed']) {
+            return redirect()->to('/profile#auto-alert-section')->with('monitor_error', 'Tunggu ' . $limit['retry_after'] . ' detik sebelum mengirim test alert lagi.');
+        }
+
+        $email = (string) ($user['email'] ?? '');
+        $nama  = (string) ($user['nama'] ?? 'Pengguna PWNED');
+        $send  = $alertService->sendTestAlertEmail($email, $nama, $email);
+
+        if (!$send['ok']) {
+            return redirect()->to('/profile#auto-alert-section')->with('monitor_error', 'Gagal mengirim test alert: ' . $send['message']);
+        }
+
+        $guard->logSecurityEvent('AUTO_ALERT_TEST', 'info', $email, 'Test email Auto Alert terkirim via ' . ($send['debug'] ?: 'mailer'), $this->request);
+        return redirect()->to('/profile#auto-alert-section')->with('monitor_success', 'Email simulasi Auto Alert berhasil dikirim ke ' . $email . ' — cek Inbox atau folder Spam.');
+    }
+
+    /**
+     * Endpoint cron HTTP aman untuk InfinityFree (dipanggil cron-job.org / GitHub Actions).
+     */
+    public function cronBreachAlerts()
+    {
+        $guard        = new SecurityGuard();
+        $ipKey        = $guard->getIpKey($this->request);
+        $alertService = new BreachAlertService();
+
+        $token = trim((string) $this->request->getGet('token'));
+        if ($token === '') {
+            $token = trim((string) $this->request->getPost('token'));
+        }
+        if ($token === '') {
+            $token = trim((string) $this->request->getHeaderLine('X-Cron-Token'));
+        }
+
+        if (!$alertService->verifyCronToken($token)) {
+            $guard->recordStrike($ipKey);
+            $guard->logSecurityEvent('CRON_ALERT_INVALID_TOKEN', 'warning', null, 'Percobaan akses cron Auto Alert dengan token tidak valid', $this->request);
+            return $this->response->setStatusCode(403)->setJSON([
+                'status'  => 'error',
+                'message' => 'Token cron tidak valid.',
+            ]);
+        }
+
+        $summary = $alertService->runDueChecks();
+
+        if (($summary['checked'] ?? 0) > 0 || ($summary['alerts_sent'] ?? 0) > 0) {
+            $guard->logSecurityEvent(
+                'CRON_AUTO_ALERT_RUN',
+                'info',
+                null,
+                sprintf(
+                    'Cron Auto Alert: dicek=%d, terkirim=%d, gagal=%d, error_api=%d',
+                    $summary['checked'],
+                    $summary['alerts_sent'],
+                    $summary['alerts_failed'],
+                    $summary['api_errors']
+                ),
+                $this->request
+            );
+        }
+
+        return $this->response->setJSON(array_merge(['status' => 'ok'], $summary));
     }
 
     public function midtransWebhook()

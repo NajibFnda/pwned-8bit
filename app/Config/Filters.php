@@ -76,7 +76,7 @@ class Filters extends BaseFilters
         'before' => [
             'ddosguard',
             // 'honeypot',
-            'csrf' => ['except' => ['midtrans/webhook', '__shield-verify']],
+            'csrf' => ['except' => ['midtrans/webhook', '__shield-verify', 'cron/breach-alerts']],
             'invalidchars',
         ],
         'after' => [

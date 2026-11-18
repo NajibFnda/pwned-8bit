@@ -266,10 +266,37 @@
             <hr id="hasil-cek" class="border-t-[4px] border-dashed border-gray-400 my-16 scroll-mt-24">
             
             <div class="space-y-6">
-                <div class="flex items-center gap-2 mb-6">
-                    <div class="w-3 h-3 bg-gray-400"></div>
-                    <h2 class="text-sm font-pixel text-gray-400 uppercase tracking-widest">ACCOUNT ANALYSIS</h2>
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 bg-gray-400"></div>
+                        <h2 class="text-sm font-pixel text-gray-400 uppercase tracking-widest">ACCOUNT ANALYSIS</h2>
+                    </div>
+                    <?php if (in_array($status, ['pwned', 'safe'], true) && session()->get('logged_in')): ?>
+                        <?php if (!empty($is_monitored)): ?>
+                            <a href="<?= base_url('profile#auto-alert-section') ?>" class="bg-green-600 hover:bg-green-700 text-white text-[9px] font-pixel px-3 py-1.5 border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] uppercase">
+                                [✓] DIPANTAU AUTO ALERT
+                            </a>
+                        <?php elseif ((int) ($monitor_quota ?? 0) > 0): ?>
+                            <form method="POST" action="<?= base_url('profile/monitor/add') ?>">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="monitor_email" value="<?= esc($email) ?>">
+                                <button type="submit" class="bg-blue-600 hover:bg-blue-800 text-white text-[9px] font-pixel px-3 py-1.5 border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] uppercase">
+                                    [+] PANTAU AUTO ALERT
+                                </button>
+                            </form>
+                        <?php else: ?>
+                            <a href="<?= base_url('upgrade') ?>" class="bg-gray-800 hover:bg-blue-700 text-white text-[9px] font-pixel px-3 py-1.5 border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] uppercase" title="Upgrade ke PLUS/PRO untuk pantau kebocoran otomatis via Email">
+                                [PLUS: AUTO ALERT]
+                            </a>
+                        <?php endif; ?>
+                    <?php endif; ?>
                 </div>
+
+                <?php if (!empty($auto_alert_triggered)): ?>
+                    <div class="border-[3px] border-black bg-yellow-100 px-4 py-3 shadow-[4px_4px_0px_rgba(0,0,0,1)] text-xs font-bold uppercase text-black">
+                        [AUTO ALERT] Kebocoran baru terdeteksi untuk email pantauan ini — notifikasi peringatan telah dikirim ke email akun Anda.
+                    </div>
+                <?php endif; ?>
                 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="border-[3px] border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] bg-white relative pt-8">

@@ -88,6 +88,13 @@
                 <span>[E]</span> EMAIL OTP
             </a>
 
+            <!-- AUTO ALERT SYSTEM -->
+            <a href="<?= base_url('admin/auto-alerts') ?>"
+               class="flex items-center gap-3 px-4 py-3 border-4 transition-none shadow-[4px_4px_0px_rgba(0,0,0,1)]
+                      <?= ($active ?? '') === 'auto_alerts' ? 'bg-black text-white border-black' : 'bg-white border-black text-black hover:bg-gray-200' ?>">
+                <span>[A]</span> AUTO ALERT
+            </a>
+
         </nav>
 
         <div class="flex-shrink-0 px-4 py-6 border-t-4 border-black space-y-4 font-bold uppercase text-xs bg-white">

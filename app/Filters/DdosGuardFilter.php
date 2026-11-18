@@ -34,6 +34,15 @@ class DdosGuardFilter implements FilterInterface
             return null;
         }
 
+        // Cron Auto-Alert endpoint uses secret token auth; enforce rate-limit without browser JS PoW challenge
+        if ($path === 'cron/breach-alerts') {
+            $cronLim = $guard->hitBucket('cron_alert_ip', $ipKey, 12, 60, true, $ipKey);
+            if (!$cronLim['allowed']) {
+                return $guard->tooManyRequestsResponse($request, 'Terlalu banyak permintaan cron.', $cronLim['retry_after'], true);
+            }
+            return null;
+        }
+
         // 1. Block known automated vulnerability scanners immediately
         $ua = trim((string) $request->getHeaderLine('User-Agent'));
         if ($ua !== '' && preg_match(self::BLOCKED_SCANNER_UAS, $ua)) {
