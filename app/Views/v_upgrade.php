@@ -30,6 +30,11 @@
             </div>
             
             <div class="flex justify-end items-center gap-3 font-bold uppercase text-sm">
+                <?php if (!empty($is_logged_in)): ?>
+                    <a href="<?= base_url('profile') ?>" class="text-black hover:bg-black hover:text-white px-2 py-1 border-2 border-black text-xs transition-none">
+                        PROFILE
+                    </a>
+                <?php endif; ?>
                 <span class="bg-black text-white px-4 py-1 text-xs font-pixel tracking-widest shadow-[4px_4px_0px_rgba(100,100,100,1)] border-2 border-white outline outline-2 outline-black">
                     PREMIUM
                 </span>

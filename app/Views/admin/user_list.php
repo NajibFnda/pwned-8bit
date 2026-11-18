@@ -14,11 +14,89 @@
 </div>
 
 <?php if (session()->getFlashdata('pesan')): ?>
-    <div class="bg-white border-4 border-black p-4 mb-8 shadow-[4px_4px_0px_rgba(0,0,0,1)] flex items-center gap-3">
+    <div class="bg-white border-4 border-black p-4 mb-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] flex items-center gap-3">
         <span class="text-xl">!</span>
-        <span class="font-bold text-sm uppercase"><?= session()->getFlashdata('pesan') ?></span>
+        <span class="font-bold text-sm uppercase"><?= esc(session()->getFlashdata('pesan')) ?></span>
     </div>
 <?php endif; ?>
+
+<?php if (session()->getFlashdata('error_admin')): ?>
+    <div class="bg-red-600 text-white border-4 border-black p-4 mb-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] flex items-center gap-3">
+        <span class="font-pixel text-xs">[!]</span>
+        <span class="font-bold text-sm uppercase"><?= esc(session()->getFlashdata('error_admin')) ?></span>
+    </div>
+<?php endif; ?>
+
+<!-- Dashboard Ringkasan -->
+<?php $sum = $summary ?? []; $plans = $sum['plans'] ?? ['free' => 0, 'plus' => 0, 'pro' => 0]; ?>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+    <div class="bg-white border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+        <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest">TOTAL PENGGUNA</span>
+        <span class="block text-2xl font-pixel text-black mt-2"><?= number_format((int) ($total_users ?? 0)) ?></span>
+        <span class="block text-[10px] font-bold text-gray-600 uppercase mt-2">F:<?= (int) $plans['free'] ?> | P+:<?= (int) $plans['plus'] ?> | PRO:<?= (int) $plans['pro'] ?></span>
+    </div>
+    <div class="bg-white border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+        <span class="block text-[10px] font-bold text-blue-600 uppercase tracking-widest">CEK EMAIL HARI INI</span>
+        <span class="block text-2xl font-pixel text-blue-600 mt-2"><?= number_format((int) ($sum['searches_today'] ?? 0)) ?></span>
+        <span class="block text-[10px] font-bold text-gray-600 uppercase mt-2">TOTAL: <?= number_format((int) ($sum['searches_total'] ?? 0)) ?> KALI</span>
+    </div>
+    <a href="<?= base_url('admin/requests') ?>" class="block bg-white hover:bg-yellow-50 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+        <span class="block text-[10px] font-bold text-yellow-700 uppercase tracking-widest">INBOX PENDING</span>
+        <span class="block text-2xl font-pixel text-yellow-600 mt-2"><?= number_format((int) ($sum['pending_requests'] ?? 0)) ?></span>
+        <span class="block text-[10px] font-bold text-gray-600 uppercase mt-2">KELOLA REQUEST &gt;&gt;</span>
+    </a>
+    <a href="<?= base_url('admin/sales') ?>" class="block bg-white hover:bg-green-50 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+        <span class="block text-[10px] font-bold text-green-700 uppercase tracking-widest">PENDAPATAN LUNAS</span>
+        <span class="block text-lg font-pixel text-green-700 mt-2">Rp<?= number_format((float) ($total_pendapatan ?? 0), 0, ',', '.') ?></span>
+        <span class="block text-[10px] font-bold text-gray-600 uppercase mt-2">DATA PENJUALAN &gt;&gt;</span>
+    </a>
+    <a href="<?= base_url('admin/security-logs') ?>" class="block bg-white hover:bg-red-50 border-4 border-black p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+        <span class="block text-[10px] font-bold text-red-600 uppercase tracking-widest">ALERT 24 JAM</span>
+        <span class="block text-2xl font-pixel text-red-600 mt-2"><?= number_format((int) ($sum['alerts_24h'] ?? 0)) ?></span>
+        <span class="block text-[10px] font-bold text-gray-600 uppercase mt-2">SECURITY LOG &gt;&gt;</span>
+    </a>
+</div>
+
+<!-- Pengumuman Website (Banner Beranda) -->
+<?php $ann = $announcement ?? ['active' => false, 'title' => 'PENGUMUMAN', 'message' => '', 'style' => 'info']; ?>
+<div class="bg-white border-4 border-black p-5 shadow-[6px_6px_0px_rgba(0,0,0,1)] mb-10">
+    <div class="flex flex-wrap justify-between items-center gap-2 border-b-2 border-dashed border-gray-400 pb-3 mb-4">
+        <h2 class="font-pixel text-xs uppercase text-black">&gt; BANNER PENGUMUMAN BERANDA</h2>
+        <span class="px-2 py-1 text-[9px] font-pixel border-2 border-black uppercase <?= !empty($ann['active']) ? 'bg-green-600 text-white' : 'bg-gray-300 text-black' ?>">
+            <?= !empty($ann['active']) ? 'STATUS: AKTIF' : 'STATUS: NONAKTIF' ?>
+        </span>
+    </div>
+    <form method="POST" action="<?= base_url('admin/announcement') ?>" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+        <?= csrf_field() ?>
+        <div class="md:col-span-3">
+            <label for="ann_title" class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-1">&gt; JUDUL LABEL</label>
+            <input type="text" id="ann_title" name="title" maxlength="60" value="<?= esc($ann['title'] ?? 'PENGUMUMAN') ?>" placeholder="PENGUMUMAN"
+                class="w-full px-3 py-2.5 bg-white border-4 border-black text-xs font-bold uppercase outline-none">
+        </div>
+        <div class="md:col-span-2">
+            <label for="ann_style" class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-1">&gt; TIPE</label>
+            <select id="ann_style" name="style" class="w-full px-3 py-2.5 bg-white border-4 border-black text-xs font-bold uppercase outline-none">
+                <option value="info" <?= ($ann['style'] ?? 'info') === 'info' ? 'selected' : '' ?>>INFO (BIRU)</option>
+                <option value="warning" <?= ($ann['style'] ?? '') === 'warning' ? 'selected' : '' ?>>PERINGATAN (KUNING)</option>
+                <option value="danger" <?= ($ann['style'] ?? '') === 'danger' ? 'selected' : '' ?>>DARURAT (MERAH)</option>
+            </select>
+        </div>
+        <div class="md:col-span-5">
+            <label for="ann_message" class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-1">&gt; ISI PENGUMUMAN</label>
+            <input type="text" id="ann_message" name="message" maxlength="350" value="<?= esc($ann['message'] ?? '') ?>" placeholder="Contoh: Maintenance server malam ini pukul 23:00 WIB..."
+                class="w-full px-3 py-2.5 bg-white border-4 border-black text-xs font-bold outline-none">
+        </div>
+        <div class="md:col-span-2 flex flex-col gap-2">
+            <label class="inline-flex items-center gap-2 text-xs font-bold uppercase cursor-pointer">
+                <input type="checkbox" name="active" value="1" <?= !empty($ann['active']) ? 'checked' : '' ?> class="w-4 h-4 accent-black">
+                <span>AKTIFKAN</span>
+            </label>
+            <button type="submit" class="w-full bg-black hover:bg-blue-700 text-white font-pixel text-[9px] px-3 py-2.5 border-2 border-black uppercase">
+                SIMPAN
+            </button>
+        </div>
+    </form>
+</div>
 
 <div class="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-6 gap-4">
     <div>

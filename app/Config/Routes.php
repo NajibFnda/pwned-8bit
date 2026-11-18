@@ -15,6 +15,10 @@ $routes->post('kirim-request', 'Home::kirimRequest');
 
 $routes->get('upgrade', 'Home::upgrade');
 $routes->post('upgrade/redeem', 'Home::redeemCode');
+$routes->get('profile', 'Home::profile');
+$routes->post('profile/password', 'Home::updateProfilePassword');
+$routes->post('profile/history/delete/(:num)', 'Home::deleteHistoryItem/$1');
+$routes->post('profile/history/clear', 'Home::clearHistory');
 $routes->post('upgrade/proses', 'Home::prosesUpgrade');
 $routes->get('upgrade/proses/(:segment)', 'Home::prosesUpgrade/$1');
 $routes->post('upgrade/nota/(:num)/confirm', 'Home::confirmUpgrade/$1');
@@ -51,8 +55,9 @@ $routes->group('admin', function($routes) {
     $routes->post('redeem/create', 'AdminController::createRedeemCode');
     $routes->post('redeem/toggle/(:num)', 'AdminController::toggleRedeemCode/$1');
     $routes->post('redeem/delete/(:num)', 'AdminController::deleteRedeemCode/$1');
-    // Security Audit Logs
+    // Security Audit Logs & Announcement
     $routes->get('security-logs', 'AdminController::securityLogs');
     $routes->post('security-logs/clear', 'AdminController::clearOldSecurityLogs');
+    $routes->post('announcement', 'AdminController::saveAnnouncement');
     $routes->get('notif-count', 'AdminController::getNotifCount');
 });

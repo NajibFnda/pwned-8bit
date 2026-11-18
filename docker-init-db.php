@@ -148,6 +148,13 @@ $queries = [
         CONSTRAINT `fk_claim_code` FOREIGN KEY (`redeem_code_id`) REFERENCES `redeem_codes` (`id`) ON DELETE CASCADE,
         CONSTRAINT `fk_claim_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci",
+
+    "CREATE TABLE IF NOT EXISTS `site_settings` (
+        `setting_key` varchar(64) NOT NULL,
+        `setting_value` text NOT NULL,
+        `updated_at` datetime NOT NULL,
+        PRIMARY KEY (`setting_key`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci",
 ];
 
 foreach ($queries as $sql) {

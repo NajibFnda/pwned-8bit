@@ -47,9 +47,9 @@
                 <div class="flex justify-end items-center gap-3 font-bold uppercase text-sm">
                     <?php if(session()->has('logged_in') && session()->get('logged_in') === true): ?>
                         <div class="hidden sm:flex items-center gap-3 border-r-2 border-black pr-3">
-                            <span>
+                            <a href="<?= base_url('profile') ?>" class="hover:underline" title="Lihat Profil &amp; Riwayat">
                                 USER: <span class="text-blue-600"><?= esc(session()->get('nama') ?? 'User') ?></span>
-                            </span>
+                            </a>
                             <a href="<?= base_url('logout') ?>" class="text-red-600 hover:bg-red-600 hover:text-white px-2 py-1 transition-none" title="Logout System">
                                 LOGOUT
                             </a>
@@ -81,12 +81,31 @@
                     <a href="<?= base_url('admin') ?>" class="px-2 py-2 text-red-600 hover:bg-red-600 hover:text-white">[ADMIN]</a>
                 <?php endif; ?>
                 <?php if(session()->has('logged_in') && session()->get('logged_in') === true): ?>
+                    <a href="<?= base_url('profile') ?>" class="px-2 py-2 text-blue-600 hover:bg-blue-600 hover:text-white">PROFIL &amp; RIWAYAT</a>
                     <a href="<?= base_url('logout') ?>" class="px-2 py-2 text-red-600 hover:bg-red-600 hover:text-white">LOGOUT (<?= esc(session()->get('nama') ?? 'User') ?>)</a>
                 <?php else: ?>
                     <a href="<?= base_url('login') ?>" class="px-2 py-2 text-blue-600 hover:bg-blue-600 hover:text-white">LOGIN</a>
                 <?php endif; ?>
             </div>
         </nav>
+
+        <?php if (!empty($announcement['active']) && trim((string) ($announcement['message'] ?? '')) !== ''): ?>
+            <?php
+                $annStyle = (string) ($announcement['style'] ?? 'info');
+                $annCls = match ($annStyle) {
+                    'danger'  => 'bg-red-600 text-white border-black',
+                    'warning' => 'bg-yellow-300 text-black border-black',
+                    default   => 'bg-blue-600 text-white border-black',
+                };
+            ?>
+            <div class="<?= $annCls ?> border-b-4 px-4 sm:px-6 py-3 flex items-center justify-between gap-4 font-bold text-xs uppercase">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="px-2 py-0.5 bg-black text-white font-pixel text-[9px] border border-white"><?= esc($announcement['title'] ?? 'PENGUMUMAN') ?></span>
+                    <span><?= esc($announcement['message']) ?></span>
+                </div>
+                <button type="button" onclick="this.parentElement.remove()" class="text-base leading-none font-bold hover:opacity-70" aria-label="Tutup pengumuman">&times;</button>
+            </div>
+        <?php endif; ?>
 
         <?php if(session()->getFlashdata('success')): ?>
             <div class="m-6 bg-white border-4 border-black text-black px-6 py-4 flex items-center justify-between shadow-[4px_4px_0px_rgba(0,0,0,1)]">

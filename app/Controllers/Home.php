@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Libraries\RedeemService;
 use App\Libraries\SecurityGuard;
+use App\Libraries\SiteSettingService;
 use App\Libraries\XonApiService;
 use App\Models\SearchHistoryModel;
 use Midtrans\Config;
@@ -303,6 +304,7 @@ class Home extends BaseController
 
         return [
             'global_metrics'     => $metrics,
+            'announcement'       => (new SiteSettingService())->getAnnouncement(),
             'turnstile_site_key' => $guard->isTurnstileEnabled() ? $guard->getTurnstileSiteKey() : '',
             'statistik'          => [
                 'sumber_aktif'      => number_format((int) ($metrics['breaches_count'] ?? 0)),
@@ -404,6 +406,170 @@ class Home extends BaseController
 
         $guard->logSecurityEvent('REDEEM_SUCCESS', 'info', $email, $result['message'], $this->request);
         return redirect()->to('/upgrade')->with('redeem_success', $result['message']);
+    }
+
+    /**
+     * Halaman Profil & Riwayat lengkap milik pengguna yang sedang login.
+     */
+    public function profile()
+    {
+        $session = session();
+        if (!$session->get('logged_in')) {
+            return redirect()->to('/login')->with('error', 'Silakan login untuk mengakses halaman profil.');
+        }
+
+        $userId      = (int) $session->get('id');
+        $user        = $this->syncUserSessionPlan($userId);
+        $currentPlan = $user['subscription_plan'] ?? 'free';
+
+        $usageLimit = match ($currentPlan) {
+            'pro'   => 999999,
+            'plus'  => 50,
+            default => 5,
+        };
+
+        $historyModel = new SearchHistoryModel();
+        $usageToday   = $historyModel->countUserSearchesToday($userId);
+
+        $db = \Config\Database::connect();
+        $totalSearches = (int) $db->table('search_history')
+            ->where('user_id', $userId)
+            ->countAllResults();
+
+        $searchHistory = $db->table('search_history')
+            ->where('user_id', $userId)
+            ->orderBy('created_at', 'DESC')
+            ->limit(50)
+            ->get()
+            ->getResultArray();
+
+        $userRequests = $db->table('user_requests')
+            ->where('user_id', $userId)
+            ->orderBy('created_at', 'DESC')
+            ->limit(15)
+            ->get()
+            ->getResultArray();
+
+        (new RedeemService())->ensureTables();
+        $redeemClaims = $db->table('redeem_claims c')
+            ->select('c.claimed_at, rc.code, rc.plan, rc.duration_days')
+            ->join('redeem_codes rc', 'rc.id = c.redeem_code_id')
+            ->where('c.user_id', $userId)
+            ->orderBy('c.claimed_at', 'DESC')
+            ->limit(15)
+            ->get()
+            ->getResultArray();
+
+        return view('v_profile', [
+            'user'           => $user,
+            'current_plan'   => $currentPlan,
+            'usage_today'    => $usageToday,
+            'usage_limit'    => $usageLimit,
+            'total_searches' => $totalSearches,
+            'search_history' => $searchHistory,
+            'user_requests'  => $userRequests,
+            'redeem_claims'  => $redeemClaims,
+        ]);
+    }
+
+    /**
+     * Ubah kata sandi langsung dari halaman profil (khusus pengguna yang login).
+     */
+    public function updateProfilePassword()
+    {
+        $session = session();
+        if (!$session->get('logged_in')) {
+            return redirect()->to('/login')->with('error', 'Silakan login terlebih dahulu.');
+        }
+
+        $guard  = new SecurityGuard();
+        $ipKey  = $guard->getIpKey($this->request);
+        $userId = (int) $session->get('id');
+        $email  = (string) ($session->get('email') ?? '');
+
+        $limit = $guard->hitBucket('profile_pwd', $ipKey . '_' . $userId, 5, 300, true, $ipKey);
+        if (!$limit['allowed']) {
+            return $guard->tooManyRequestsResponse($this->request, 'Terlalu banyak percobaan ubah sandi. Tunggu sebentar.', $limit['retry_after']);
+        }
+
+        $currentPwd = (string) $this->request->getPost('current_password');
+        $newPwd     = (string) $this->request->getPost('new_password');
+        $confirmPwd = (string) $this->request->getPost('confirm_password');
+
+        if ($currentPwd === '' || $newPwd === '' || $confirmPwd === '') {
+            return redirect()->to('/profile')->with('profile_pwd_error', 'Semua kolom kata sandi wajib diisi.');
+        }
+
+        $pwdCheck = $guard->validatePasswordStrength($newPwd);
+        if (!$pwdCheck['valid']) {
+            return redirect()->to('/profile')->with('profile_pwd_error', $pwdCheck['reason']);
+        }
+
+        if ($newPwd !== $confirmPwd) {
+            return redirect()->to('/profile')->with('profile_pwd_error', 'Konfirmasi kata sandi baru tidak cocok.');
+        }
+
+        if ($newPwd === $currentPwd) {
+            return redirect()->to('/profile')->with('profile_pwd_error', 'Kata sandi baru tidak boleh sama dengan kata sandi saat ini.');
+        }
+
+        $userModel = new \App\Models\UserModel();
+        $user      = $userModel->find($userId);
+        if (!$user) {
+            return redirect()->to('/logout');
+        }
+
+        $stored  = (string) ($user['password'] ?? '');
+        $hashed  = password_get_info($stored)['algo'] !== null;
+        $isMatch = $hashed ? password_verify($currentPwd, $stored) : hash_equals($stored, $currentPwd);
+
+        if (!$isMatch) {
+            $guard->logSecurityEvent('CHANGEPWD_FAILED', 'warning', $email, 'Sandi lama salah saat ubah sandi di /profile', $this->request);
+            return redirect()->to('/profile')->with('profile_pwd_error', 'Kata sandi saat ini salah.');
+        }
+
+        $userModel->update($userId, ['password' => password_hash($newPwd, PASSWORD_DEFAULT)]);
+        $session->regenerate();
+        $guard->logSecurityEvent('CHANGE_PASSWORD', 'info', $email, 'Kata sandi diperbarui dari halaman /profile', $this->request);
+
+        return redirect()->to('/profile')->with('profile_pwd_success', 'Kata sandi akun berhasil diperbarui.');
+    }
+
+    /**
+     * Hapus satu item riwayat pengecekan milik user aktif saja (IDOR-safe).
+     */
+    public function deleteHistoryItem($id)
+    {
+        $session = session();
+        if (!$session->get('logged_in')) {
+            return redirect()->to('/login');
+        }
+
+        $userId = (int) $session->get('id');
+        $db     = \Config\Database::connect();
+        $db->table('search_history')
+            ->where('id', (int) $id)
+            ->where('user_id', $userId)
+            ->delete();
+
+        return redirect()->to('/profile')->with('history_success', 'Item riwayat pengecekan dihapus.');
+    }
+
+    /**
+     * Bersihkan seluruh riwayat pengecekan milik user aktif.
+     */
+    public function clearHistory()
+    {
+        $session = session();
+        if (!$session->get('logged_in')) {
+            return redirect()->to('/login');
+        }
+
+        $userId = (int) $session->get('id');
+        $db     = \Config\Database::connect();
+        $db->table('search_history')->where('user_id', $userId)->delete();
+
+        return redirect()->to('/profile')->with('history_success', 'Semua riwayat pengecekan email berhasil dibersihkan.');
     }
 
     public function midtransWebhook()

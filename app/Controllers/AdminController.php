@@ -2,6 +2,7 @@
 namespace App\Controllers;
 use App\Libraries\RedeemService;
 use App\Libraries\SecurityGuard;
+use App\Libraries\SiteSettingService;
 use App\Models\UserModel;
 
 
@@ -47,6 +48,23 @@ public function index()
         $hasil = $query->getRow();
         $total_pendapatan = $hasil->total_uang ?? 0;
 
+        $planRows   = $db->query("SELECT subscription_plan, COUNT(*) AS cnt FROM users GROUP BY subscription_plan")->getResultArray();
+        $planCounts = ['free' => 0, 'plus' => 0, 'pro' => 0];
+        foreach ($planRows as $pr) {
+            $pKey = (string) ($pr['subscription_plan'] ?? 'free');
+            if (isset($planCounts[$pKey])) {
+                $planCounts[$pKey] = (int) $pr['cnt'];
+            }
+        }
+
+        $todayStart      = date('Y-m-d 00:00:00');
+        $searchesToday   = (int) $db->table('search_history')->where('created_at >=', $todayStart)->countAllResults();
+        $searchesTotal   = (int) $db->table('search_history')->countAllResults();
+        $pendingRequests = (int) $db->table('user_requests')->where('status', 'pending')->countAllResults();
+        $auditSummary    = (new SecurityGuard())->getSecurityAuditPage('', '', 1, 1);
+        $alerts24h       = (int) (($auditSummary['stats_24h']['warning'] ?? 0) + ($auditSummary['stats_24h']['critical'] ?? 0));
+        $announcement    = (new SiteSettingService())->getAnnouncement();
+
         $data = [
             'title'             => 'Manajemen Pengguna',
             'active'            => 'users',
@@ -59,6 +77,14 @@ public function index()
             'real_transactions' => $transactionModel->getTransactionsWithUser(),
             'total_pendapatan'  => $total_pendapatan,
             'filter_aktif'      => $filter_paket,
+            'summary'           => [
+                'plans'            => $planCounts,
+                'searches_today'   => $searchesToday,
+                'searches_total'   => $searchesTotal,
+                'pending_requests' => $pendingRequests,
+                'alerts_24h'       => $alerts24h,
+            ],
+            'announcement'      => $announcement,
         ];
 
         return view('admin/user_list', $data);
@@ -556,6 +582,33 @@ public function exportCSV()
         );
 
         return redirect()->to('/admin/redeem')->with('pesan', 'Kode redeem ' . $row['code'] . ' berhasil dihapus.');
+    }
+
+    public function saveAnnouncement()
+    {
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to('/')->with('error', 'Akses ditolak!');
+        }
+
+        $active  = !empty($this->request->getPost('active'));
+        $title   = (string) $this->request->getPost('title');
+        $message = (string) $this->request->getPost('message');
+        $style   = (string) $this->request->getPost('style');
+
+        $result = (new SiteSettingService())->saveAnnouncement($active, $title, $message, $style);
+        if (!$result['ok']) {
+            return redirect()->to('/admin')->with('error_admin', $result['message']);
+        }
+
+        (new SecurityGuard())->logSecurityEvent(
+            'ADMIN_UPDATE_ANNOUNCEMENT',
+            'info',
+            session()->get('email'),
+            'Banner pengumuman ' . ($active ? 'DIAKTIFKAN' : 'DINONAKTIFKAN') . ': ' . mb_substr(trim($title), 0, 40),
+            $this->request
+        );
+
+        return redirect()->to('/admin')->with('pesan', $result['message']);
     }
 
     public function getNotifCount()
