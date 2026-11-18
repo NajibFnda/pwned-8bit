@@ -111,6 +111,7 @@
         const notifBadge = document.getElementById('notif-badge');
 
         function fetchNotifCount() {
+            if (document.hidden) return;
             fetch('<?= base_url('admin/notif-count') ?>')
                 .then(r => r.json())
                 .then(data => {
@@ -125,7 +126,7 @@
         }
 
         fetchNotifCount();
-        setInterval(fetchNotifCount, 30000);
+        setInterval(fetchNotifCount, 60000);
     </script>
 
 </body>

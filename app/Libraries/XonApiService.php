@@ -143,20 +143,23 @@ class XonApiService
         $cache        = Services::cache();
         $cacheKey     = 'xon_global_metrics_v1';
         $backupKey    = 'xon_global_metrics_backup_v1';
-        $cacheTtl     = 600;   // 10 menit — jaga kuota rate limit gratis XON
+        $cacheTtl     = 1200;  // 20 menit — ringankan beban node shared hosting
+        $backoffTtl   = 180;   // 3 menit jeda jika API/DNS sedang timeout agar worker PHP tidak menumpuk
         $backupTtl    = 86400; // 24 jam — fallback jika API timeout / 429
 
         if (!$forceRefresh) {
             $cached = $cache->get($cacheKey);
             if (is_array($cached) && !empty($cached['chart']['values'])) {
-                $cached['source'] = 'cache';
+                if (($cached['source'] ?? '') === 'live') {
+                    $cached['source'] = 'cache';
+                }
                 return $cached;
             }
         }
 
         try {
             $fullUrl    = $this->baseUrl . '/metrics/detailed';
-            $response   = $this->client->get($fullUrl);
+            $response   = $this->client->get($fullUrl, ['timeout' => 5, 'connect_timeout' => 3]);
             $statusCode = $response->getStatusCode();
 
             if ($statusCode === 200) {
@@ -182,10 +185,13 @@ class XonApiService
         $backup = $cache->get($backupKey);
         if (is_array($backup) && !empty($backup['chart']['values'])) {
             $backup['source'] = 'backup_cache';
+            $cache->save($cacheKey, $backup, $backoffTtl);
             return $backup;
         }
 
-        return $this->buildGlobalMetricsPayload($this->getBaselineMetricsSnapshot(), 'fallback', date('Y-m-d H:i:s'));
+        $fallback = $this->buildGlobalMetricsPayload($this->getBaselineMetricsSnapshot(), 'fallback', date('Y-m-d H:i:s'));
+        $cache->save($cacheKey, $fallback, $backoffTtl);
+        return $fallback;
     }
 
     // =========================================================================

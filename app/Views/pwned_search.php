@@ -693,6 +693,7 @@
             }
 
             async function pollBreachTrends() {
+                if (document.hidden) return;
                 const feedText = document.getElementById('live-feed-text');
                 if (feedText) feedText.textContent = 'LIVE_FEED: SYNCING...';
 
@@ -713,8 +714,8 @@
                 }
             }
 
-            // Sinkronisasi berkala setiap 60 detik (backend menjaga rate limit via cache 10 menit)
-            setInterval(pollBreachTrends, 60000);
+            // Sinkronisasi berkala setiap 3 menit saat tab aktif untuk menghemat beban server
+            setInterval(pollBreachTrends, 180000);
         })();
     </script>
 
