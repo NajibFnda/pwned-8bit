@@ -401,11 +401,11 @@ class Home extends BaseController
 
         if (!$result['ok']) {
             $guard->logSecurityEvent('REDEEM_FAILED', 'warning', $email, 'Gagal klaim kode "' . substr(strtoupper(trim($rawCode)), 0, 32) . '": ' . $result['message'], $this->request);
-            return redirect()->to('/upgrade')->with('redeem_error', $result['message']);
+            return redirect()->to('/upgrade#redeem-section')->with('redeem_error', $result['message']);
         }
 
         $guard->logSecurityEvent('REDEEM_SUCCESS', 'info', $email, $result['message'], $this->request);
-        return redirect()->to('/upgrade')->with('redeem_success', $result['message']);
+        return redirect()->to('/upgrade#redeem-section')->with('redeem_success', $result['message']);
     }
 
     /**
