@@ -117,6 +117,7 @@ class OtpMailerService
             'from_name'            => $cfg['from_name'],
             'has_brevo_key'        => $cfg['brevo_api_key'] !== '',
             'brevo_key_len'        => strlen($cfg['brevo_api_key']),
+            'brevo_key_prefix'     => $cfg['brevo_api_key'] !== '' ? substr($cfg['brevo_api_key'], 0, 9) : '',
             'smtp_host'            => $cfg['smtp_host'],
             'smtp_port'            => $cfg['smtp_port'],
             'smtp_user'            => $cfg['smtp_user'],
@@ -166,8 +167,14 @@ class OtpMailerService
         }
         $smtpUser = trim((string) ($input['smtp_user'] ?? ''));
 
-        $newBrevoKey = trim((string) ($input['brevo_api_key'] ?? ''));
-        $brevoEnc    = $newBrevoKey !== ''
+        $newBrevoKey = trim((string) ($input['brevo_api_key'] ?? ''), "\"' \t\r\n");
+        if ($driver === 'brevo' && $newBrevoKey !== '' && str_starts_with(strtolower($newBrevoKey), 'xsmtpsib-')) {
+            return [
+                'ok'      => false,
+                'message' => 'Key berawalan "xsmtpsib-" adalah SMTP Key (tab SMTP), bukan REST API Key v3 (harus berawalan "xkeysib-..." dari tab API Keys -> Generate a new API key).',
+            ];
+        }
+        $brevoEnc = $newBrevoKey !== ''
             ? $this->encryptSecret($newBrevoKey)
             : (string) ($current['brevo_api_key_enc'] ?? '');
 
@@ -356,10 +363,12 @@ HTML;
                 'textContent' => $textBody,
             ];
 
+            $brevoKey = trim((string) $cfg['brevo_api_key'], "\"' \t\r\n");
+
             $res = $client->post('https://api.brevo.com/v3/smtp/email', [
                 'headers' => [
                     'accept'       => 'application/json',
-                    'api-key'      => $cfg['brevo_api_key'],
+                    'api-key'      => $brevoKey,
                     'content-type' => 'application/json',
                 ],
                 'body' => json_encode($payload, JSON_UNESCAPED_UNICODE),

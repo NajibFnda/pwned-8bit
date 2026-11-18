@@ -86,6 +86,21 @@
                         <button type="button" onclick="toggleSecretInput('brevo_api_key', this)"
                             class="px-3 bg-gray-100 hover:bg-black hover:text-white border-l-2 border-black text-[10px] font-bold uppercase">LIHAT</button>
                     </div>
+                    <span class="block text-[10px] text-gray-600 font-bold mt-1">
+                        Demi keamanan, key yang sudah tersimpan sengaja disembunyikan dari kotak input (cukup kosongkan jika tidak mengganti key).
+                    </span>
+                    <?php
+                        $bp = strtolower((string) ($c['brevo_key_prefix'] ?? ''));
+                        if (!empty($c['has_brevo_key']) && $bp !== '' && !str_starts_with($bp, 'xkeysib-')):
+                    ?>
+                        <span class="block text-[10px] text-red-700 font-bold mt-1">
+                            [!] Key tersimpan berawalan "<?= esc($c['brevo_key_prefix']) ?>..." — BUKAN API Key v3 ("xkeysib-..."). Di Brevo, buka tab <strong>API Keys</strong> &gt; <strong>Generate a new API key</strong> (bukan tab SMTP / MCP).
+                        </span>
+                    <?php elseif (!empty($c['has_brevo_key']) && str_starts_with($bp, 'xkeysib-')): ?>
+                        <span class="block text-[10px] text-green-700 font-bold mt-1">
+                            [OK] Format awalan key tersimpan valid (<?= esc($c['brevo_key_prefix']) ?>...). Jika HTTP 401 "Key not found", key tersebut sudah dihapus/nonaktif di Brevo — buat API Key baru di tab API Keys.
+                        </span>
+                    <?php endif; ?>
                 </div>
             </div>
 
