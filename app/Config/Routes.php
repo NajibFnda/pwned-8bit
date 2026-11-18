@@ -17,6 +17,8 @@ $routes->get('upgrade', 'Home::upgrade');
 $routes->post('upgrade/redeem', 'Home::redeemCode');
 $routes->get('profile', 'Home::profile');
 $routes->post('profile/password', 'Home::updateProfilePassword');
+$routes->post('profile/send-otp', 'Home::sendProfileOtp');
+$routes->post('profile/verify-otp', 'Home::verifyProfileOtp');
 $routes->post('profile/history/delete/(:num)', 'Home::deleteHistoryItem/$1');
 $routes->post('profile/history/clear', 'Home::clearHistory');
 $routes->post('upgrade/proses', 'Home::prosesUpgrade');
@@ -36,6 +38,12 @@ $routes->post('/auth/changePassword', 'Auth::changePassword');
 $routes->get('/logout', 'Auth::logout');
 $routes->get('/register', 'Auth::register');
 $routes->post('/auth/saveRegister', 'Auth::saveRegister');
+$routes->get('/verify-otp', 'Auth::verifyRegisterOtp');
+$routes->post('/verify-otp', 'Auth::submitVerifyRegisterOtp');
+$routes->post('/verify-otp/resend', 'Auth::resendRegisterOtp');
+$routes->get('/forgot-password', 'Auth::forgotPassword');
+$routes->post('/forgot-password/send', 'Auth::sendForgotOtp');
+$routes->post('/forgot-password/reset', 'Auth::resetForgotPassword');
 
 // ─── Admin Routes ─────────────────────────────────────────────────────────────
 $routes->group('admin', function($routes) {
@@ -62,5 +70,8 @@ $routes->group('admin', function($routes) {
     $routes->post('security-logs/unban-all', 'AdminController::unbanAllIps');
     $routes->post('announcement', 'AdminController::saveAnnouncement');
     $routes->post('under-attack', 'AdminController::toggleUnderAttack');
+    $routes->get('otp-settings', 'AdminController::otpSettings');
+    $routes->post('otp-settings/save', 'AdminController::saveOtpSettings');
+    $routes->post('otp-settings/test', 'AdminController::testOtpEmail');
     $routes->get('notif-count', 'AdminController::getNotifCount');
 });

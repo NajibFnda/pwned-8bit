@@ -26,6 +26,12 @@
     </div>
 
     <div class="bg-white p-8 border-4 border-black w-full max-w-md shadow-[8px_8px_0px_rgba(255,255,255,1)]">
+        <?php if (!empty($register_otp_required)): ?>
+            <div class="bg-blue-50 border-2 border-black text-blue-900 px-4 py-3 mb-5 text-[11px] font-bold uppercase">
+                [OTP AKTIF] Kode verifikasi 6 digit akan dikirim ke email Anda sebelum akun diaktifkan.
+            </div>
+        <?php endif; ?>
+
         <?php $errorMsg = $form_error ?? session()->getFlashdata('error'); ?>
         <?php if (!empty($errorMsg)): ?>
             <div class="bg-red-600 border-2 border-black text-white px-4 py-3 shadow-[4px_4px_0px_rgba(0,0,0,1)] mb-6 text-xs text-center font-bold uppercase">

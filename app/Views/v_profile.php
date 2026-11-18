@@ -53,6 +53,13 @@
                     <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest">&gt; AKUN AKTIF</span>
                     <div class="font-bold text-sm uppercase mt-2 truncate"><?= esc($user['nama'] ?? session()->get('nama')) ?></div>
                     <div class="text-xs text-blue-600 font-bold truncate mt-1"><?= esc($user['email'] ?? session()->get('email')) ?></div>
+                    <div class="mt-2">
+                        <?php if (!empty($user['email_verified_at'])): ?>
+                            <span class="inline-block px-2 py-0.5 bg-green-600 text-white border border-black text-[9px] font-bold uppercase">[EMAIL TERVERIFIKASI]</span>
+                        <?php else: ?>
+                            <span class="inline-block px-2 py-0.5 bg-yellow-300 text-black border border-black text-[9px] font-bold uppercase">[BELUM VERIFIKASI OTP]</span>
+                        <?php endif; ?>
+                    </div>
                 </div>
 
                 <div class="bg-white border-4 border-black p-5 shadow-[6px_6px_0px_rgba(0,0,0,1)]">
@@ -138,6 +145,45 @@
                             SIMPAN SANDI BARU
                         </button>
                     </form>
+
+                    <?php if (empty($user['email_verified_at']) && !empty($otp_mailer_active)): ?>
+                        <div class="border-t-4 border-black pt-5 mt-5 space-y-4">
+                            <h3 class="font-pixel text-[10px] uppercase text-black">&gt; VERIFIKASI EMAIL (OTP)</h3>
+
+                            <?php if (session()->getFlashdata('profile_otp_success')): ?>
+                                <div class="bg-green-600 border-2 border-black text-white px-3 py-2 text-xs font-bold uppercase">
+                                    [OK] <?= esc(session()->getFlashdata('profile_otp_success')) ?>
+                                </div>
+                            <?php endif; ?>
+                            <?php if (session()->getFlashdata('profile_otp_error')): ?>
+                                <div class="bg-red-600 border-2 border-black text-white px-3 py-2 text-xs font-bold uppercase">
+                                    [!] <?= esc(session()->getFlashdata('profile_otp_error')) ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <form method="POST" action="<?= base_url('profile/send-otp') ?>">
+                                <?= csrf_field() ?>
+                                <?php $ocd = (int) ($otp_cooldown ?? 0); ?>
+                                <button type="submit" <?= $ocd > 0 ? 'disabled' : '' ?>
+                                    class="w-full bg-blue-600 hover:bg-blue-800 disabled:opacity-50 text-white font-pixel text-[9px] px-4 py-3 border-2 border-black uppercase">
+                                    <?= $ocd > 0 ? 'KIRIM ULANG OTP (' . $ocd . 'S)' : 'KIRIM KODE OTP VERIFIKASI' ?>
+                                </button>
+                            </form>
+
+                            <form method="POST" action="<?= base_url('profile/verify-otp') ?>" class="flex gap-2">
+                                <?= csrf_field() ?>
+                                <input type="text" name="otp_code" required maxlength="6" pattern="\d{6}" inputmode="numeric" placeholder="6 DIGIT OTP"
+                                    class="flex-1 px-3 py-2.5 bg-white border-2 border-black font-pixel text-xs text-center tracking-widest">
+                                <button type="submit" class="bg-black hover:bg-green-700 text-white font-pixel text-[9px] px-4 py-2.5 border-2 border-black uppercase">
+                                    VERIFIKASI
+                                </button>
+                            </form>
+                        </div>
+                    <?php elseif (!empty($user['email_verified_at'])): ?>
+                        <div class="border-t-2 border-dashed border-gray-300 pt-4 text-[11px] font-bold text-green-700 uppercase">
+                            [OK] EMAIL TERVERIFIKASI SEJAK <?= esc(date('d M Y H:i', strtotime((string) $user['email_verified_at']))) ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Status Request Contact Admin & Riwayat Klaim Redeem -->

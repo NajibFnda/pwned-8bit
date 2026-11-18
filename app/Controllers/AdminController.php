@@ -1,5 +1,7 @@
 <?php
 namespace App\Controllers;
+use App\Libraries\OtpMailerService;
+use App\Libraries\OtpService;
 use App\Libraries\RedeemService;
 use App\Libraries\SecurityGuard;
 use App\Libraries\SiteSettingService;
@@ -655,6 +657,87 @@ public function exportCSV()
 
         $redirectTo = $this->request->getPost('back') === 'logs' ? '/admin/security-logs' : '/admin';
         return redirect()->to($redirectTo)->with('pesan', $result['message']);
+    }
+
+    public function otpSettings()
+    {
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to('/')->with('error', 'Akses ditolak!');
+        }
+
+        $mailer     = new OtpMailerService();
+        $otpService = new OtpService();
+
+        return view('admin/otp_settings', [
+            'title'     => 'Pengaturan Email OTP',
+            'active'    => 'otp_settings',
+            'cfg'       => $mailer->getPublicConfig(),
+            'otp_stats' => $otpService->getAdminStats24h(),
+        ]);
+    }
+
+    public function saveOtpSettings()
+    {
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to('/')->with('error', 'Akses ditolak!');
+        }
+
+        $res = (new OtpMailerService())->saveSettings([
+            'driver'               => $this->request->getPost('driver'),
+            'from_email'           => $this->request->getPost('from_email'),
+            'from_name'            => $this->request->getPost('from_name'),
+            'brevo_api_key'        => $this->request->getPost('brevo_api_key'),
+            'smtp_host'            => $this->request->getPost('smtp_host'),
+            'smtp_port'            => $this->request->getPost('smtp_port'),
+            'smtp_user'            => $this->request->getPost('smtp_user'),
+            'smtp_pass'            => $this->request->getPost('smtp_pass'),
+            'require_register_otp' => $this->request->getPost('require_register_otp'),
+        ]);
+
+        if (!$res['ok']) {
+            return redirect()->to('/admin/otp-settings')->with('error_admin', $res['message']);
+        }
+
+        (new SecurityGuard())->logSecurityEvent(
+            'ADMIN_UPDATE_OTP_SETTINGS',
+            'info',
+            session()->get('email'),
+            $res['message'],
+            $this->request
+        );
+
+        return redirect()->to('/admin/otp-settings')->with('pesan', $res['message']);
+    }
+
+    public function testOtpEmail()
+    {
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to('/')->with('error', 'Akses ditolak!');
+        }
+
+        $targetEmail = strtolower(trim((string) $this->request->getPost('test_email')));
+        if ($targetEmail === '' || !filter_var($targetEmail, FILTER_VALIDATE_EMAIL)) {
+            return redirect()->to('/admin/otp-settings')->with('error_admin', 'Masukkan email tujuan uji coba yang valid.');
+        }
+
+        $mailer   = new OtpMailerService();
+        $testCode = (string) random_int(100000, 999999);
+        $res      = $mailer->sendOtpEmail($targetEmail, 'Admin Test', $testCode, 'verify_email', 10);
+
+        if (!$res['ok']) {
+            $dbg = !empty($res['debug']) ? ' (' . $res['debug'] . ')' : '';
+            return redirect()->to('/admin/otp-settings')->with('error_admin', $res['message'] . $dbg);
+        }
+
+        (new SecurityGuard())->logSecurityEvent(
+            'ADMIN_TEST_OTP_EMAIL',
+            'info',
+            session()->get('email'),
+            'Test kirim email OTP ke ' . $targetEmail . ' berhasil (' . ($res['debug'] ?? 'OK') . ')',
+            $this->request
+        );
+
+        return redirect()->to('/admin/otp-settings')->with('pesan', 'Test email OTP (' . $testCode . ') berhasil dikirim ke ' . $targetEmail . ' via ' . ($res['debug'] ?? 'OK') . '!');
     }
 
     public function getNotifCount()

@@ -53,11 +53,16 @@
             </div>
 
             <div>
-                <div class="flex justify-between items-center mb-2">
+                <div class="flex justify-between items-center mb-2 gap-2">
                     <label for="password" class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest">> PASSWORD</label>
-                    <button type="button" onclick="toggleMode('change')" class="text-[10px] font-bold text-blue-600 hover:underline uppercase">
-                        Ganti Sandi?
-                    </button>
+                    <div class="flex items-center gap-3">
+                        <a href="<?= base_url('forgot-password') ?>" class="text-[10px] font-bold text-red-600 hover:underline uppercase">
+                            Lupa Sandi? (OTP)
+                        </a>
+                        <button type="button" onclick="toggleMode('change')" class="text-[10px] font-bold text-blue-600 hover:underline uppercase">
+                            Ganti Sandi?
+                        </button>
+                    </div>
                 </div>
                 <div class="flex border-2 border-black bg-white focus-within:bg-gray-100">
                     <input type="password" id="password" name="password" required placeholder="********"
@@ -177,7 +182,8 @@
         </form>
 
         <div class="mt-8 text-center text-xs text-gray-500 border-t-2 border-dashed border-gray-400 pt-6 space-y-4 font-bold uppercase">
-            <div class="flex justify-center gap-4">
+            <div class="flex flex-wrap justify-center gap-3">
+                <a href="<?= base_url('forgot-password') ?>" class="text-red-600 hover:bg-red-600 hover:text-white px-2 py-1 border border-red-600 text-[10px]">LUPA SANDI (OTP)</a>
                 <button type="button" id="btn-switch-mode" onclick="toggleMode('change')" class="text-black hover:bg-black hover:text-white px-2 py-1 border border-black text-[10px]">
                     GANTI SANDI
                 </button>

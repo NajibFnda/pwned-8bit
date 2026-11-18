@@ -79,6 +79,13 @@
                 <span>[L]</span> SECURITY LOG
             </a>
 
+            <!-- EMAIL OTP SETTINGS -->
+            <a href="<?= base_url('admin/otp-settings') ?>"
+               class="flex items-center gap-3 px-4 py-3 border-4 transition-none shadow-[4px_4px_0px_rgba(0,0,0,1)]
+                      <?= ($active ?? '') === 'otp_settings' ? 'bg-black text-white border-black' : 'bg-white border-black text-black hover:bg-gray-200' ?>">
+                <span>[E]</span> EMAIL OTP
+            </a>
+
         </nav>
 
         <div class="flex-shrink-0 px-4 py-6 border-t-4 border-black space-y-4 font-bold uppercase text-xs bg-white">

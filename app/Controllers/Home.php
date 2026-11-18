@@ -2,6 +2,8 @@
 
 namespace App\Controllers;
 
+use App\Libraries\OtpMailerService;
+use App\Libraries\OtpService;
 use App\Libraries\RedeemService;
 use App\Libraries\SecurityGuard;
 use App\Libraries\SiteSettingService;
@@ -438,6 +440,10 @@ class Home extends BaseController
             return redirect()->to('/login')->with('error', 'Silakan login untuk mengakses halaman profil.');
         }
 
+        $otpService = new OtpService();
+        $otpService->ensureSchema();
+        $mailer = new OtpMailerService();
+
         $userId      = (int) $session->get('id');
         $user        = $this->syncUserSessionPlan($userId);
         $currentPlan = $user['subscription_plan'] ?? 'free';
@@ -481,15 +487,88 @@ class Home extends BaseController
             ->getResultArray();
 
         return view('v_profile', [
-            'user'           => $user,
-            'current_plan'   => $currentPlan,
-            'usage_today'    => $usageToday,
-            'usage_limit'    => $usageLimit,
-            'total_searches' => $totalSearches,
-            'search_history' => $searchHistory,
-            'user_requests'  => $userRequests,
-            'redeem_claims'  => $redeemClaims,
+            'user'              => $user,
+            'current_plan'      => $currentPlan,
+            'usage_today'       => $usageToday,
+            'usage_limit'       => $usageLimit,
+            'total_searches'    => $totalSearches,
+            'search_history'    => $searchHistory,
+            'user_requests'     => $userRequests,
+            'redeem_claims'     => $redeemClaims,
+            'otp_mailer_active' => $mailer->isConfigured(),
+            'otp_cooldown'      => !empty($user['email']) ? $otpService->getResendCooldownRemaining('verify_email', (string) $user['email']) : 0,
         ]);
+    }
+
+    /**
+     * Kirim kode OTP verifikasi email untuk pengguna yang sudah login di halaman profil.
+     */
+    public function sendProfileOtp()
+    {
+        $session = session();
+        if (!$session->get('logged_in')) {
+            return redirect()->to('/login');
+        }
+
+        $guard  = new SecurityGuard();
+        $ipKey  = $guard->getIpKey($this->request);
+        $userId = (int) $session->get('id');
+        $user   = (new \App\Models\UserModel())->find($userId);
+        if (!$user) {
+            return redirect()->to('/logout');
+        }
+
+        if (!empty($user['email_verified_at'])) {
+            return redirect()->to('/profile')->with('profile_otp_success', 'Email Anda sudah terverifikasi.');
+        }
+
+        $otpService = new OtpService($guard);
+        $res        = $otpService->issueAndSendOtp('verify_email', (string) $user['email'], (string) ($user['nama'] ?? ''), $ipKey);
+        if (!$res['ok']) {
+            return redirect()->to('/profile')->with('profile_otp_error', $res['message']);
+        }
+
+        $guard->logSecurityEvent('PROFILE_OTP_SENT', 'info', (string) $user['email'], 'OTP verifikasi email profil dikirim', $this->request);
+        return redirect()->to('/profile')->with('profile_otp_success', 'Kode OTP 6 digit telah dikirim ke ' . $user['email'] . '.');
+    }
+
+    /**
+     * Verifikasi OTP email dari halaman profil pengguna.
+     */
+    public function verifyProfileOtp()
+    {
+        $session = session();
+        if (!$session->get('logged_in')) {
+            return redirect()->to('/login');
+        }
+
+        $guard     = new SecurityGuard();
+        $ipKey     = $guard->getIpKey($this->request);
+        $userId    = (int) $session->get('id');
+        $userModel = new \App\Models\UserModel();
+        $user      = $userModel->find($userId);
+        if (!$user) {
+            return redirect()->to('/logout');
+        }
+
+        $limit = $guard->hitBucket('otp_verify_profile', $ipKey . '_' . $userId, 8, 300, true, $ipKey);
+        if (!$limit['allowed']) {
+            return $guard->tooManyRequestsResponse($this->request, 'Terlalu banyak percobaan OTP.', $limit['retry_after']);
+        }
+
+        $code       = (string) $this->request->getPost('otp_code');
+        $otpService = new OtpService($guard);
+        $verify     = $otpService->verifyOtp('verify_email', (string) $user['email'], $code, $ipKey);
+
+        if (!$verify['ok']) {
+            $guard->logSecurityEvent('PROFILE_OTP_FAILED', 'warning', (string) $user['email'], $verify['message'], $this->request);
+            return redirect()->to('/profile')->with('profile_otp_error', $verify['message']);
+        }
+
+        $userModel->update($userId, ['email_verified_at' => date('Y-m-d H:i:s')]);
+        $guard->logSecurityEvent('PROFILE_EMAIL_VERIFIED', 'info', (string) $user['email'], 'Email profil terverifikasi via OTP', $this->request);
+
+        return redirect()->to('/profile')->with('profile_otp_success', 'Email akun berhasil diverifikasi!');
     }
 
     /**

@@ -13,6 +13,7 @@ class UserModel extends Model
         'nama', 
         'email', 
         'password', 
+        'email_verified_at',
         'role', 
         'subscription_plan', 
         'expire_date',
