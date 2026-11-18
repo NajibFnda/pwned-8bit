@@ -30,9 +30,6 @@
             </div>
             
             <div class="flex justify-end items-center gap-3 font-bold uppercase text-sm">
-                <button type="button" onclick="openContactModal()" class="bg-blue-600 hover:bg-blue-800 text-white px-3 py-1.5 text-[10px] font-pixel border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-none uppercase">
-                    CONTACT ADMIN
-                </button>
                 <span class="bg-black text-white px-4 py-1 text-xs font-pixel tracking-widest shadow-[4px_4px_0px_rgba(100,100,100,1)] border-2 border-white outline outline-2 outline-black">
                     PREMIUM
                 </span>
@@ -96,6 +93,45 @@
                     <a href="<?= base_url('login') ?>" class="bg-black hover:bg-blue-700 text-white font-pixel text-[10px] px-5 py-3 border-2 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] uppercase">
                         LOGIN NOW &gt;&gt;
                     </a>
+                <?php endif; ?>
+            </div>
+
+            <!-- Klaim Kode Redeem Langganan -->
+            <div class="max-w-4xl mx-auto bg-white border-4 border-black p-5 shadow-[6px_6px_0px_rgba(0,0,0,1)] space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b-2 border-dashed border-gray-400 pb-3">
+                    <div>
+                        <div class="text-[10px] font-pixel text-black uppercase tracking-widest">[K] REDEEM_CODE.EXE</div>
+                        <p class="text-xs font-bold text-gray-600 uppercase mt-1">Punya kode redeem dari Admin? Tukarkan di sini untuk langsung mengaktifkan paket PLUS / PRO.</p>
+                    </div>
+                </div>
+
+                <?php if (session()->getFlashdata('redeem_success')): ?>
+                    <div class="bg-green-600 border-2 border-black text-white px-4 py-3 text-xs font-bold uppercase shadow-[3px_3px_0px_rgba(0,0,0,1)]">
+                        [OK] <?= esc(session()->getFlashdata('redeem_success')) ?>
+                    </div>
+                <?php endif; ?>
+                <?php if (session()->getFlashdata('redeem_error')): ?>
+                    <div class="bg-red-600 border-2 border-black text-white px-4 py-3 text-xs font-bold uppercase shadow-[3px_3px_0px_rgba(0,0,0,1)]">
+                        [!] <?= esc(session()->getFlashdata('redeem_error')) ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($is_logged_in)): ?>
+                    <form method="POST" action="<?= base_url('upgrade/redeem') ?>" class="flex flex-col sm:flex-row gap-3">
+                        <?= csrf_field() ?>
+                        <input type="text" name="redeem_code" required maxlength="32" autocomplete="off"
+                            placeholder="MASUKKAN KODE REDEEM (MIS. PWN-PRO-XXXX)"
+                            class="flex-1 px-4 py-3 bg-white text-black border-4 border-black font-mono font-bold uppercase tracking-widest placeholder-gray-400 outline-none focus:bg-gray-100">
+                        <button type="submit"
+                            class="bg-black hover:bg-blue-700 text-white font-pixel text-[10px] px-6 py-3.5 border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] uppercase transition-none whitespace-nowrap">
+                            KLAIM KODE &gt;&gt;
+                        </button>
+                    </form>
+                <?php else: ?>
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gray-100 border-2 border-black p-3">
+                        <span class="text-xs font-bold uppercase text-gray-700">Login terlebih dahulu untuk menukarkan kode redeem.</span>
+                        <a href="<?= base_url('login') ?>" class="bg-black hover:bg-blue-700 text-white font-pixel text-[9px] px-4 py-2.5 border-2 border-black uppercase">LOGIN</a>
+                    </div>
                 <?php endif; ?>
             </div>
 

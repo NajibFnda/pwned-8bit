@@ -1,5 +1,6 @@
 <?php
 namespace App\Controllers;
+use App\Libraries\RedeemService;
 use App\Libraries\SecurityGuard;
 use App\Models\UserModel;
 
@@ -36,9 +37,10 @@ public function index()
                 ->groupEnd();
         }
 
-        $users      = $builder->orderBy('id', 'DESC')->paginate(25, 'users');
-        $pager      = $this->userModel->pager;
-        $totalUsers = (new UserModel())->countAllResults();
+        $users         = $builder->orderBy('id', 'DESC')->paginate(25, 'users');
+        $pager         = $this->userModel->pager;
+        $totalUsers    = (new UserModel())->countAllResults();
+        $filteredTotal = (int) $pager->getTotal('users');
 
         $db = \Config\Database::connect();
         $query = $db->query("SELECT SUM(harga) as total_uang FROM transactions WHERE status IN ('paid', 'settlement')");
@@ -51,6 +53,8 @@ public function index()
             'users'             => $users,
             'pager'             => $pager,
             'total_users'       => $totalUsers,
+            'filtered_total'    => $filteredTotal,
+            'per_page'          => 25,
             'search_q'          => $search_q,
             'real_transactions' => $transactionModel->getTransactionsWithUser(),
             'total_pendapatan'  => $total_pendapatan,
@@ -152,12 +156,23 @@ public function index()
             return;
         }
 
-        $db = \Config\Database::connect();
+        $db          = \Config\Database::connect();
+        $hasClaims   = $db->tableExists('redeem_claims');
         foreach (array_chunk($userIds, 200) as $chunk) {
+            if ($hasClaims) {
+                $db->table('redeem_claims')->whereIn('user_id', $chunk)->delete();
+            }
             $db->table('user_requests')->whereIn('user_id', $chunk)->delete();
             $db->table('search_history')->whereIn('user_id', $chunk)->delete();
             $db->table('transactions')->whereIn('user_id', $chunk)->delete();
             $db->table('users')->whereIn('id', $chunk)->delete();
+        }
+
+        // Compact next AUTO_INCREMENT back down to MAX(id) + 1 after deleting tail/spam rows
+        try {
+            $db->query('ALTER TABLE `users` AUTO_INCREMENT = 1');
+        } catch (\Throwable $e) {
+            // Non-fatal if shared host restricts ALTER TABLE privileges
         }
     }
 
@@ -444,6 +459,103 @@ public function exportCSV()
         );
 
         return redirect()->to('/admin/security-logs')->with('pesan', $deleted . ' log lama (> 7 hari) berhasil dibersihkan.');
+    }
+
+    public function redeemCodes()
+    {
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to('/')->with('error', 'Akses ditolak!');
+        }
+
+        $overview = (new RedeemService())->getAdminOverview();
+
+        return view('admin/redeem', [
+            'title'  => 'Kode Redeem',
+            'active' => 'redeem',
+            'codes'  => $overview['codes'],
+            'claims' => $overview['claims'],
+        ]);
+    }
+
+    public function createRedeemCode()
+    {
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to('/')->with('error', 'Akses ditolak!');
+        }
+
+        $rawCode      = (string) $this->request->getPost('code');
+        $plan         = (string) $this->request->getPost('plan');
+        $durationDays = (int) $this->request->getPost('duration_days');
+        $maxUses      = (int) $this->request->getPost('max_uses');
+        $expiresAt    = (string) $this->request->getPost('expires_at');
+        $adminId      = (int) session()->get('id');
+
+        $result = (new RedeemService())->createCode(
+            $rawCode,
+            $plan,
+            $durationDays,
+            $maxUses,
+            $expiresAt,
+            $adminId
+        );
+
+        if ($result['ok']) {
+            (new SecurityGuard())->logSecurityEvent(
+                'ADMIN_CREATE_REDEEM',
+                'info',
+                session()->get('email'),
+                $result['message'],
+                $this->request
+            );
+            return redirect()->to('/admin/redeem')->with('pesan', $result['message']);
+        }
+
+        return redirect()->to('/admin/redeem')->with('error', $result['message']);
+    }
+
+    public function toggleRedeemCode($id)
+    {
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to('/')->with('error', 'Akses ditolak!');
+        }
+
+        $row = (new RedeemService())->toggleCode((int) $id);
+        if (!$row) {
+            return redirect()->to('/admin/redeem')->with('error', 'Kode redeem tidak ditemukan.');
+        }
+
+        $statusLabel = ((int) $row['is_active'] === 1) ? 'DIAKTIFKAN' : 'DINONAKTIFKAN';
+        (new SecurityGuard())->logSecurityEvent(
+            'ADMIN_TOGGLE_REDEEM',
+            'info',
+            session()->get('email'),
+            'Kode ' . ($row['code'] ?? '') . ' -> ' . $statusLabel,
+            $this->request
+        );
+
+        return redirect()->to('/admin/redeem')->with('pesan', 'Kode ' . $row['code'] . ' berhasil ' . strtolower($statusLabel) . '.');
+    }
+
+    public function deleteRedeemCode($id)
+    {
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to('/')->with('error', 'Akses ditolak!');
+        }
+
+        $row = (new RedeemService())->deleteCode((int) $id);
+        if (!$row) {
+            return redirect()->to('/admin/redeem')->with('error', 'Kode redeem tidak ditemukan.');
+        }
+
+        (new SecurityGuard())->logSecurityEvent(
+            'ADMIN_DELETE_REDEEM',
+            'warning',
+            session()->get('email'),
+            'Menghapus kode redeem ' . ($row['code'] ?? ''),
+            $this->request
+        );
+
+        return redirect()->to('/admin/redeem')->with('pesan', 'Kode redeem ' . $row['code'] . ' berhasil dihapus.');
     }
 
     public function getNotifCount()

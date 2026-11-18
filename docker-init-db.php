@@ -120,6 +120,34 @@ $queries = [
         KEY `idx_sec_event_time` (`event_type`,`created_at`),
         KEY `idx_sec_severity_time` (`severity`,`created_at`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci",
+
+    "CREATE TABLE IF NOT EXISTS `redeem_codes` (
+        `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+        `code` varchar(32) NOT NULL,
+        `plan` enum('plus','pro') NOT NULL DEFAULT 'plus',
+        `duration_days` int(10) unsigned NOT NULL DEFAULT 30,
+        `max_uses` int(10) unsigned NOT NULL DEFAULT 1,
+        `used_count` int(10) unsigned NOT NULL DEFAULT 0,
+        `is_active` tinyint(1) NOT NULL DEFAULT 1,
+        `expires_at` datetime DEFAULT NULL,
+        `created_by` int(10) unsigned DEFAULT NULL,
+        `created_at` datetime NOT NULL,
+        PRIMARY KEY (`id`),
+        UNIQUE KEY `uniq_redeem_code` (`code`),
+        KEY `idx_redeem_active` (`is_active`,`expires_at`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci",
+
+    "CREATE TABLE IF NOT EXISTS `redeem_claims` (
+        `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+        `redeem_code_id` int(10) unsigned NOT NULL,
+        `user_id` int(10) unsigned NOT NULL,
+        `claimed_at` datetime NOT NULL,
+        PRIMARY KEY (`id`),
+        UNIQUE KEY `uniq_code_user` (`redeem_code_id`,`user_id`),
+        KEY `idx_claim_user` (`user_id`),
+        CONSTRAINT `fk_claim_code` FOREIGN KEY (`redeem_code_id`) REFERENCES `redeem_codes` (`id`) ON DELETE CASCADE,
+        CONSTRAINT `fk_claim_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci",
 ];
 
 foreach ($queries as $sql) {

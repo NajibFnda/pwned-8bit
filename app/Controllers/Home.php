@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Libraries\RedeemService;
 use App\Libraries\SecurityGuard;
 use App\Libraries\XonApiService;
 use App\Models\SearchHistoryModel;
@@ -366,6 +367,43 @@ class Home extends BaseController
         return redirect()
             ->to('/upgrade?contact=1')
             ->with('upgrade_info', 'Pembayaran otomatis belum tersedia saat ini. Silakan ajukan upgrade melalui tombol Contact Admin.');
+    }
+
+    /**
+     * Klaim kode redeem langganan dari Admin oleh pengguna yang sudah login.
+     */
+    public function redeemCode()
+    {
+        $session = session();
+        if (!$session->get('logged_in')) {
+            return redirect()->to('/login')->with('error', 'Silakan login terlebih dahulu untuk menukarkan kode redeem.');
+        }
+
+        $guard   = new SecurityGuard();
+        $ipKey   = $guard->getIpKey($this->request);
+        $userId  = (int) $session->get('id');
+        $email   = (string) ($session->get('email') ?? '');
+
+        $limit = $guard->hitBucket('redeem_ip', $ipKey . '_' . $userId, 6, 600, true, $ipKey);
+        if (!$limit['allowed']) {
+            $guard->logSecurityEvent('REDEEM_RATE_LIMIT', 'warning', $email, 'Terlalu banyak percobaan klaim kode redeem', $this->request);
+            return $guard->tooManyRequestsResponse(
+                $this->request,
+                'Terlalu banyak percobaan menukarkan kode redeem. Silakan tunggu beberapa menit.',
+                $limit['retry_after']
+            );
+        }
+
+        $rawCode = (string) $this->request->getPost('redeem_code');
+        $result  = (new RedeemService())->redeemForUser($userId, $rawCode);
+
+        if (!$result['ok']) {
+            $guard->logSecurityEvent('REDEEM_FAILED', 'warning', $email, 'Gagal klaim kode "' . substr(strtoupper(trim($rawCode)), 0, 32) . '": ' . $result['message'], $this->request);
+            return redirect()->to('/upgrade')->with('redeem_error', $result['message']);
+        }
+
+        $guard->logSecurityEvent('REDEEM_SUCCESS', 'info', $email, $result['message'], $this->request);
+        return redirect()->to('/upgrade')->with('redeem_success', $result['message']);
     }
 
     public function midtransWebhook()

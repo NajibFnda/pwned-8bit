@@ -65,6 +65,13 @@
                 <span id="notif-badge" class="hidden bg-red-600 text-white font-pixel text-[8px] px-1.5 py-0.5 border border-black">0</span>
             </a>
 
+            <!-- REDEEM CODES -->
+            <a href="<?= base_url('admin/redeem') ?>"
+               class="flex items-center gap-3 px-4 py-3 border-4 transition-none shadow-[4px_4px_0px_rgba(0,0,0,1)]
+                      <?= ($active ?? '') === 'redeem' ? 'bg-black text-white border-black' : 'bg-white border-black text-black hover:bg-gray-200' ?>">
+                <span>[K]</span> REDEEM CODE
+            </a>
+
             <!-- SECURITY LOGS -->
             <a href="<?= base_url('admin/security-logs') ?>"
                class="flex items-center gap-3 px-4 py-3 border-4 transition-none shadow-[4px_4px_0px_rgba(0,0,0,1)]

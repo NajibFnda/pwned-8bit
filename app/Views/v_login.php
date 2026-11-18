@@ -59,8 +59,14 @@
                         Ganti Sandi?
                     </button>
                 </div>
-                <input type="password" id="password" name="password" required placeholder="********"
-                    class="w-full px-4 py-3 bg-white text-black border-2 border-black focus:outline-none focus:bg-gray-100 font-bold placeholder-gray-400">
+                <div class="flex border-2 border-black bg-white focus-within:bg-gray-100">
+                    <input type="password" id="password" name="password" required placeholder="********"
+                        class="w-full px-4 py-3 bg-transparent text-black focus:outline-none font-bold placeholder-gray-400">
+                    <button type="button" onclick="togglePasswordVisibility('password', this)" aria-label="Lihat sandi" aria-pressed="false"
+                        class="px-3 bg-gray-100 hover:bg-black hover:text-white border-l-2 border-black text-[10px] font-bold uppercase whitespace-nowrap">
+                        LIHAT
+                    </button>
+                </div>
             </div>
 
             <?php if (!empty($show_captcha)): ?>
@@ -111,20 +117,38 @@
 
             <div>
                 <label for="old_password" class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">> SANDI LAMA</label>
-                <input type="password" id="old_password" name="old_password" required placeholder="Masukkan sandi saat ini"
-                    class="w-full px-4 py-3 bg-white text-black border-2 border-black focus:outline-none focus:bg-gray-100 font-bold placeholder-gray-400">
+                <div class="flex border-2 border-black bg-white focus-within:bg-gray-100">
+                    <input type="password" id="old_password" name="old_password" required placeholder="Masukkan sandi saat ini"
+                        class="w-full px-4 py-3 bg-transparent text-black focus:outline-none font-bold placeholder-gray-400">
+                    <button type="button" onclick="togglePasswordVisibility('old_password', this)" aria-label="Lihat sandi lama" aria-pressed="false"
+                        class="px-3 bg-gray-100 hover:bg-black hover:text-white border-l-2 border-black text-[10px] font-bold uppercase whitespace-nowrap">
+                        LIHAT
+                    </button>
+                </div>
             </div>
 
             <div>
                 <label for="new_password" class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">> SANDI BARU</label>
-                <input type="password" id="new_password" name="new_password" required minlength="8" placeholder="Min. 8 karakter (huruf + angka)"
-                    class="w-full px-4 py-3 bg-white text-black border-2 border-black focus:outline-none focus:bg-gray-100 font-bold placeholder-gray-400">
+                <div class="flex border-2 border-black bg-white focus-within:bg-gray-100">
+                    <input type="password" id="new_password" name="new_password" required minlength="8" placeholder="Min. 8 karakter (huruf + angka)"
+                        class="w-full px-4 py-3 bg-transparent text-black focus:outline-none font-bold placeholder-gray-400">
+                    <button type="button" onclick="togglePasswordVisibility('new_password', this)" aria-label="Lihat sandi baru" aria-pressed="false"
+                        class="px-3 bg-gray-100 hover:bg-black hover:text-white border-l-2 border-black text-[10px] font-bold uppercase whitespace-nowrap">
+                        LIHAT
+                    </button>
+                </div>
             </div>
 
             <div>
                 <label for="confirm_password" class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">> KONFIRMASI SANDI BARU</label>
-                <input type="password" id="confirm_password" name="confirm_password" required minlength="8" placeholder="Ulangi sandi baru"
-                    class="w-full px-4 py-3 bg-white text-black border-2 border-black focus:outline-none focus:bg-gray-100 font-bold placeholder-gray-400">
+                <div class="flex border-2 border-black bg-white focus-within:bg-gray-100">
+                    <input type="password" id="confirm_password" name="confirm_password" required minlength="8" placeholder="Ulangi sandi baru"
+                        class="w-full px-4 py-3 bg-transparent text-black focus:outline-none font-bold placeholder-gray-400">
+                    <button type="button" onclick="togglePasswordVisibility('confirm_password', this)" aria-label="Lihat konfirmasi sandi" aria-pressed="false"
+                        class="px-3 bg-gray-100 hover:bg-black hover:text-white border-l-2 border-black text-[10px] font-bold uppercase whitespace-nowrap">
+                        LIHAT
+                    </button>
+                </div>
             </div>
 
             <?php if (!empty($turnstile_site_key)): ?>
@@ -167,6 +191,15 @@
     </div>
 
     <script>
+        function togglePasswordVisibility(inputId, btn) {
+            const input = document.getElementById(inputId);
+            if (!input || !btn) return;
+            const show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            btn.textContent = show ? 'TUTUP' : 'LIHAT';
+            btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+        }
+
         function refreshCpCaptcha() {
             const img = document.getElementById('cp-captcha-img');
             if (img) {

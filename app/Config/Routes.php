@@ -14,6 +14,7 @@ $routes->get('api/breach-trends', 'Home::breachTrends');
 $routes->post('kirim-request', 'Home::kirimRequest');
 
 $routes->get('upgrade', 'Home::upgrade');
+$routes->post('upgrade/redeem', 'Home::redeemCode');
 $routes->post('upgrade/proses', 'Home::prosesUpgrade');
 $routes->get('upgrade/proses/(:segment)', 'Home::prosesUpgrade/$1');
 $routes->post('upgrade/nota/(:num)/confirm', 'Home::confirmUpgrade/$1');
@@ -45,6 +46,11 @@ $routes->group('admin', function($routes) {
     $routes->get('requests', 'AdminController::requests');
     $routes->post('requests/approve/(:num)', 'AdminController::approveRequest/$1');
     $routes->post('requests/reject/(:num)', 'AdminController::rejectRequest/$1');
+    // Redeem Codes
+    $routes->get('redeem', 'AdminController::redeemCodes');
+    $routes->post('redeem/create', 'AdminController::createRedeemCode');
+    $routes->post('redeem/toggle/(:num)', 'AdminController::toggleRedeemCode/$1');
+    $routes->post('redeem/delete/(:num)', 'AdminController::deleteRedeemCode/$1');
     // Security Audit Logs
     $routes->get('security-logs', 'AdminController::securityLogs');
     $routes->post('security-logs/clear', 'AdminController::clearOldSecurityLogs');

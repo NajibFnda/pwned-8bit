@@ -66,9 +66,16 @@
             </thead>
             <tbody class="divide-y-4 divide-black font-bold">
                 <?php if (!empty($users)): ?>
-                    <?php foreach ($users as $user): ?>
+                    <?php
+                        $currPageNum   = isset($pager) ? $pager->getCurrentPage('users') : 1;
+                        $perPageNum    = (int) ($per_page ?? 25);
+                        $filteredCount = (int) ($filtered_total ?? count($users));
+                        $rowOffset     = ($currPageNum - 1) * $perPageNum;
+                    ?>
+                    <?php foreach ($users as $idx => $user): ?>
+                        <?php $displayNo = max(1, $filteredCount - $rowOffset - $idx); ?>
                         <tr class="hover:bg-gray-100 transition-none">
-                            <td class="px-6 py-4 font-pixel text-xs border-r-4 border-black">#<?= $user['id'] ?></td>
+                            <td class="px-6 py-4 font-pixel text-xs border-r-4 border-black" title="DB ID #<?= (int) $user['id'] ?>">#<?= $displayNo ?></td>
                             <td class="px-6 py-4 border-r-4 border-black">
                                 <div class="text-black uppercase tracking-widest"><?= esc($user['nama'] ?? 'User') ?></div>
                                 <div class="text-[10px] text-blue-600 uppercase mt-1"><?= esc($user['email']) ?></div>
