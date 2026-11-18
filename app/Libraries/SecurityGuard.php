@@ -18,6 +18,9 @@ class SecurityGuard
     private const BAN_WINDOW       = 300; // 5 minutes violation window
     private const BAN_STRIKE_LIMIT = 8;
     private const BAN_DURATION     = 900; // 15 minutes ban
+    private const POW_COOKIE       = 'pwned_clearance';
+    private const POW_TTL          = 1800; // 30 minutes PoW clearance
+    private const POW_DIFFICULTY   = 4;    // SHA-256 leading hex zeros ("0000")
 
     /**
      * Common throwaway/disposable domains blocked from creating accounts.
@@ -307,11 +310,31 @@ class SecurityGuard
     }
 
     /**
-     * Check persistent MySQL quota for critical actions (register, contact_request).
+     * Check persistent MySQL quota per IP/actor for critical actions (register, contact_request).
      *
      * @return array{allowed: bool, count: int, retry_after: int}
      */
     public function checkDbQuota(string $action, string $ipKey, int $maxHits, int $windowSec, ?int $actorId = null): array
+    {
+        return $this->evaluateDbQuota($action, $maxHits, $windowSec, $ipKey, $actorId);
+    }
+
+    /**
+     * Check persistent site-wide MySQL quota across ALL IPs combined (blocks distributed botnets).
+     *
+     * @return array{allowed: bool, count: int, retry_after: int}
+     */
+    public function checkDbGlobalQuota(string $action, int $maxHits, int $windowSec): array
+    {
+        return $this->evaluateDbQuota($action, $maxHits, $windowSec, null, null);
+    }
+
+    /**
+     * Shared MySQL sliding-window quota query helper for per-IP and global circuit breakers.
+     *
+     * @return array{allowed: bool, count: int, retry_after: int}
+     */
+    private function evaluateDbQuota(string $action, int $maxHits, int $windowSec, ?string $ipKey = null, ?int $actorId = null): array
     {
         try {
             $this->ensureRateLimitTable();
@@ -322,13 +345,15 @@ class SecurityGuard
                 ->where('action', $action)
                 ->where('created_at >=', $since);
 
-            if ($actorId !== null && $actorId > 0) {
-                $builder->groupStart()
-                    ->where('ip_hash', $ipKey)
-                    ->orWhere('actor_id', $actorId)
-                    ->groupEnd();
-            } else {
-                $builder->where('ip_hash', $ipKey);
+            if ($ipKey !== null && $ipKey !== '') {
+                if ($actorId !== null && $actorId > 0) {
+                    $builder->groupStart()
+                        ->where('ip_hash', $ipKey)
+                        ->orWhere('actor_id', $actorId)
+                        ->groupEnd();
+                } else {
+                    $builder->where('ip_hash', $ipKey);
+                }
             }
 
             $rows  = $builder->orderBy('created_at', 'ASC')->get()->getResultArray();
@@ -981,6 +1006,338 @@ HTML;
         $cutoff = date('Y-m-d H:i:s', time() - (max(1, $olderThanDays) * 86400));
         $db->table('security_logs')->where('created_at <', $cutoff)->delete();
         return (int) $db->affectedRows();
+    }
+
+    /**
+     * Check zero-DB Under-Attack flag (manual Admin override OR active auto-surge shield).
+     */
+    public function isUnderAttackMode(): bool
+    {
+        return $this->isManualUnderAttack() || $this->isAutoShieldActive();
+    }
+
+    public function isManualUnderAttack(): bool
+    {
+        $dir = $this->ensureRateLimitDir();
+        return $dir !== null && is_file($dir . DIRECTORY_SEPARATOR . '.under_attack');
+    }
+
+    public function setManualUnderAttackFlag(bool $enabled): void
+    {
+        $dir = $this->ensureRateLimitDir();
+        if ($dir === null) {
+            return;
+        }
+        $file = $dir . DIRECTORY_SEPARATOR . '.under_attack';
+        if ($enabled) {
+            @file_put_contents($file, (string) time());
+        } elseif (is_file($file)) {
+            @unlink($file);
+        }
+    }
+
+    public function isAutoShieldActive(): bool
+    {
+        $dir = $this->ensureRateLimitDir();
+        if ($dir === null) {
+            return false;
+        }
+        $file = $dir . DIRECTORY_SEPARATOR . '.auto_shield';
+        if (!is_file($file)) {
+            return false;
+        }
+        $exp = (int) @file_get_contents($file);
+        if ($exp <= time()) {
+            @unlink($file);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Activate automatic multi-IP PoW surge shield for $durationSec; returns true on fresh activation.
+     */
+    public function triggerAutoShield(int $durationSec = 300): bool
+    {
+        $dir = $this->ensureRateLimitDir();
+        if ($dir === null) {
+            return false;
+        }
+        $file      = $dir . DIRECTORY_SEPARATOR . '.auto_shield';
+        $wasActive = $this->isAutoShieldActive();
+        @file_put_contents($file, (string) (time() + max(60, $durationSec)));
+        return !$wasActive;
+    }
+
+    /**
+     * Remove temporary IP bans, bucket counters, and auto-surge lock (keeps Admin manual flag).
+     */
+    public function clearAllRateLimits(): int
+    {
+        $dir = $this->ensureRateLimitDir();
+        if ($dir === null) {
+            return 0;
+        }
+        $removed = 0;
+        $files   = @glob($dir . DIRECTORY_SEPARATOR . '*.json');
+        if (is_array($files)) {
+            foreach ($files as $file) {
+                if (@unlink($file)) {
+                    $removed++;
+                }
+            }
+        }
+        $autoFile = $dir . DIRECTORY_SEPARATOR . '.auto_shield';
+        if (is_file($autoFile) && @unlink($autoFile)) {
+            $removed++;
+        }
+        return $removed;
+    }
+
+    /**
+     * Summarize active rate-limit buckets & auto-banned IPs for the Admin panel.
+     *
+     * @return array{active_bans: int, active_buckets: int}
+     */
+    public function getRateLimitStats(): array
+    {
+        $dir = $this->ensureRateLimitDir();
+        if ($dir === null) {
+            return ['active_bans' => 0, 'active_buckets' => 0];
+        }
+        $now     = time();
+        $bans    = 0;
+        $buckets = 0;
+        $files   = @glob($dir . DIRECTORY_SEPARATOR . '*.json');
+        if (is_array($files)) {
+            foreach ($files as $file) {
+                if (str_starts_with(basename($file), 'ban_')) {
+                    $data = json_decode((string) @file_get_contents($file), true);
+                    if ((int) ($data['banned_until'] ?? 0) > $now) {
+                        $bans++;
+                    }
+                } else {
+                    $buckets++;
+                }
+            }
+        }
+        return ['active_bans' => $bans, 'active_buckets' => $buckets];
+    }
+
+    /**
+     * Verify HMAC-signed Proof-of-Work clearance cookie bound to client User-Agent.
+     */
+    public function hasValidPowClearance(IncomingRequest $request): bool
+    {
+        $token = (string) ($request->getCookie(self::POW_COOKIE) ?? ($_COOKIE[self::POW_COOKIE] ?? ''));
+        if ($token === '') {
+            return false;
+        }
+        $parts = explode('|', $token, 3);
+        if (count($parts) !== 3 || !ctype_digit($parts[0])) {
+            return false;
+        }
+        [$expiresStr, $uaHash, $sig] = $parts;
+        if ((int) $expiresStr < time()) {
+            return false;
+        }
+        $expectedUaHash = $this->getUaHash($request);
+        if (!hash_equals($expectedUaHash, $uaHash)) {
+            return false;
+        }
+        $expectedSig = hash_hmac('sha256', $expiresStr . '|' . $uaHash, $this->getPowSecret());
+        return hash_equals($expectedSig, $sig);
+    }
+
+    /**
+     * Verify solved SHA-256 Proof-of-Work submission and issue signed clearance cookie.
+     */
+    public function verifyAndIssuePowCookie(IncomingRequest $request): ResponseInterface
+    {
+        $ipKey     = $this->getIpKey($request);
+        $challenge = trim((string) $request->getPost('challenge'));
+        $nonceSol  = trim((string) $request->getPost('nonce_sol'));
+        $response  = \Config\Services::response();
+
+        if ($challenge === '' || $nonceSol === '' || strlen($nonceSol) > 24 || !preg_match('/^[a-zA-Z0-9_-]+$/', $nonceSol)) {
+            $this->recordStrike($ipKey);
+            return $response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Challenge tidak valid.']);
+        }
+
+        $parts = explode('.', $challenge, 3);
+        if (count($parts) !== 3 || !ctype_digit($parts[0])) {
+            $this->recordStrike($ipKey);
+            return $response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Format challenge ditolak.']);
+        }
+
+        [$tsStr, $salt, $sig] = $parts;
+        $ts  = (int) $tsStr;
+        $now = time();
+        if ($ts > $now + 30 || ($now - $ts) > 300) {
+            return $response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Challenge kedaluwarsa, memuat ulang...']);
+        }
+
+        $uaHash      = $this->getUaHash($request);
+        $expectedSig = substr(hash_hmac('sha256', $tsStr . '|' . $salt . '|' . $ipKey . '|' . $uaHash, $this->getPowSecret()), 0, 24);
+        if (!hash_equals($expectedSig, $sig)) {
+            $this->recordStrike($ipKey);
+            return $response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Signature challenge tidak cocok.']);
+        }
+
+        $digest = hash('sha256', $challenge . ':' . $nonceSol);
+        $prefix = str_repeat('0', self::POW_DIFFICULTY);
+        if (!str_starts_with($digest, $prefix)) {
+            $this->recordStrike($ipKey);
+            return $response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Proof-of-Work tidak memenuhi tingkat kesulitan.']);
+        }
+
+        $expires     = (string) ($now + self::POW_TTL);
+        $cookieSig   = hash_hmac('sha256', $expires . '|' . $uaHash, $this->getPowSecret());
+        $cookieValue = $expires . '|' . $uaHash . '|' . $cookieSig;
+        $isHttps     = $request->isSecure() || strtolower((string) $request->getHeaderLine('X-Forwarded-Proto')) === 'https';
+
+        $cookieHeader = self::POW_COOKIE . '=' . rawurlencode($cookieValue)
+            . '; Path=/; Max-Age=' . self::POW_TTL
+            . '; HttpOnly; SameSite=Lax'
+            . ($isHttps ? '; Secure' : '');
+
+        return $response
+            ->setStatusCode(200)
+            ->setHeader('Set-Cookie', $cookieHeader)
+            ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
+            ->setJSON(['status' => 'ok', 'ttl' => self::POW_TTL]);
+    }
+
+    /**
+     * Render lightweight zero-DB HTTP 503 JavaScript SHA-256 Proof-of-Work waiting page.
+     */
+    public function powChallengeResponse(IncomingRequest $request): ResponseInterface
+    {
+        $response = \Config\Services::response()
+            ->setStatusCode(503)
+            ->setHeader('Retry-After', '5')
+            ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
+            ->setHeader('X-Robots-Tag', 'noindex, nofollow');
+
+        $isJson = $request->isAJAX()
+            || str_contains(strtolower((string) $request->getHeaderLine('Accept')), 'application/json');
+
+        if ($isJson) {
+            return $response->setJSON([
+                'status'  => 'shield',
+                'code'    => 503,
+                'message' => 'Mode Perlindungan DDoS aktif. Muat ulang halaman utama untuk verifikasi browser.',
+            ]);
+        }
+
+        $ipKey     = $this->getIpKey($request);
+        $uaHash    = $this->getUaHash($request);
+        $ts        = (string) time();
+        $salt      = bin2hex(random_bytes(8));
+        $sig       = substr(hash_hmac('sha256', $ts . '|' . $salt . '|' . $ipKey . '|' . $uaHash, $this->getPowSecret()), 0, 24);
+        $challenge = $ts . '.' . $salt . '.' . $sig;
+        $verifyUrl = '/__shield-verify';
+        $prefix    = str_repeat('0', self::POW_DIFFICULTY);
+
+        $html = <<<HTML
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex,nofollow">
+    <title>Verifikasi Keamanan Browser - PWNED</title>
+    <style>
+        body{font-family:monospace;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:16px}
+        .card{max-width:480px;width:100%;background:#fff;color:#000;border:4px solid #000;box-shadow:8px 8px 0 #2563eb;padding:24px}
+        .tag{display:inline-block;background:#000;color:#fff;padding:5px 10px;font-size:11px;font-weight:bold;margin-bottom:12px}
+        h1{font-size:18px;margin:0 0 10px;text-transform:uppercase}
+        p{font-size:12px;line-height:1.5;color:#334155;font-weight:bold;margin:0 0 14px}
+        .bar-wrap{width:100%;height:14px;border:3px solid #000;background:#e2e8f0;overflow:hidden;margin-bottom:10px}
+        .bar{height:100%;width:15%;background:#2563eb;transition:width .25s}
+        .st{font-size:11px;font-weight:bold;color:#1d4ed8}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="tag">[PWNED // ACTIVE DDoS SHIELD]</div>
+        <h1>Memeriksa Browser Anda...</h1>
+        <p>Traffic tinggi atau mode perlindungan aktif terdeteksi. Sistem melakukan verifikasi kriptografis otomatis sebelum meneruskan Anda ke situs.</p>
+        <div class="bar-wrap"><div class="bar" id="pbar"></div></div>
+        <div class="st" id="st">MENGHITUNG VERIFIKASI SHA-256...</div>
+        <noscript><p style="color:#dc2626;margin-top:12px">Aktifkan JavaScript di browser Anda lalu muat ulang halaman ini.</p></noscript>
+    </div>
+    <script>
+    (function(){
+        var chal = "{$challenge}", pref = "{$prefix}", url = "{$verifyUrl}";
+        var st = document.getElementById("st"), bar = document.getElementById("pbar");
+        function rightRotate(v,a){return(v>>>a)|(v<<(32-a));}
+        function sha256Fallback(ascii){
+            var maxWord=Math.pow(2,32),result='',words=[],asciiBitLength=ascii.length*8,i,j;
+            var hash=sha256Fallback.h=sha256Fallback.h||[],k=sha256Fallback.k=sha256Fallback.k||[],primeCounter=k.length;
+            var isComposite={};
+            for(var c=2;primeCounter<64;c++){if(!isComposite[c]){for(i=0;i<313;i+=c)isComposite[i]=c;hash[primeCounter]=(Math.pow(c,.5)*maxWord)|0;k[primeCounter++]=(Math.pow(c,1/3)*maxWord)|0;}}
+            ascii+=String.fromCharCode(128);while(ascii.length%64-56)ascii+=String.fromCharCode(0);
+            for(i=0;i<ascii.length;i++){j=ascii.charCodeAt(i);words[i>>2]|=j<<((3-i)%4)*8;}
+            words[words.length]=((asciiBitLength/maxWord)|0);words[words.length]=(asciiBitLength);
+            for(j=0;j<words.length;){var w=words.slice(j,j+=16),oldHash=hash;hash=hash.slice(0,8);
+                for(i=0;i<64;i++){var w15=w[i-15],w2=w[i-2],a=hash[0],e=hash[4];
+                    var t1=hash[7]+(rightRotate(e,6)^rightRotate(e,11)^rightRotate(e,25))+((e&hash[5])^((~e)&hash[6]))+k[i]+(w[i]=(i<16)?w[i]:(w[i-16]+(rightRotate(w15,7)^rightRotate(w15,18)^(w15>>>3))+w[i-7]+(rightRotate(w2,17)^rightRotate(w2,19)^(w2>>>10)))|0);
+                    var t2=(rightRotate(a,2)^rightRotate(a,13)^rightRotate(a,22))+((a&hash[1])^(a&hash[2])^(hash[1]&hash[2]));
+                    hash=[(t1+t2)|0].concat(hash);hash[4]=(hash[4]+t1)|0;
+                }
+                for(i=0;i<8;i++)hash[i]=(hash[i]+oldHash[i])|0;
+            }
+            for(i=0;i<8;i++)for(j=3;j+1;j--){var b=(hash[i]>>(j*8))&255;result+=((b<16)?0:'')+b.toString(16);}
+            return result;
+        }
+        async function digestHex(s){
+            if(window.crypto&&window.crypto.subtle){
+                var buf=await window.crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));
+                return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,"0");}).join("");
+            }
+            return sha256Fallback(s);
+        }
+        async function solve(){
+            var n=0;
+            while(n<2000000){
+                var h=await digestHex(chal+":"+n);
+                if(h.indexOf(pref)===0){return String(n);}
+                n++;
+                if(n%2500===0){bar.style.width=Math.min(85,20+Math.floor(n/1200))+"%";await new Promise(function(r){setTimeout(r,0);});}
+            }
+            throw new Error("timeout");
+        }
+        solve().then(function(sol){
+            bar.style.width="95%"; st.textContent="MENERBITKAN IZIN AKSES...";
+            var body="challenge="+encodeURIComponent(chal)+"&nonce_sol="+encodeURIComponent(sol);
+            return fetch(url,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded","Accept":"application/json"},body:body});
+        }).then(function(r){
+            if(!r.ok)throw new Error("verify");
+            bar.style.width="100%"; st.textContent="TERVERIFIKASI. MEMUAT ULANG...";
+            window.location.reload();
+        }).catch(function(){
+            st.style.color="#dc2626"; st.textContent="VERIFIKASI GAGAL. MUAT ULANG HALAMAN.";
+        });
+    })();
+    </script>
+</body>
+</html>
+HTML;
+
+        return $response->setBody($html);
+    }
+
+    private function getPowSecret(): string
+    {
+        $envFallback = function_exists('env') ? env('encryption.key', '') : '';
+        $key         = trim((string) (getenv('encryption.key') ?: ($_ENV['encryption.key'] ?? $envFallback)));
+        return $key !== '' ? $key : hash('sha256', ROOTPATH . 'pwned_pow_shield_v1');
+    }
+
+    private function getUaHash(IncomingRequest $request): string
+    {
+        return substr(hash('sha256', (string) $request->getHeaderLine('User-Agent')), 0, 16);
     }
 
     private function pruneStaleBucketFiles(string $dir, int $olderThan): void

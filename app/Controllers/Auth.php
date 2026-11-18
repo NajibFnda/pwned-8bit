@@ -226,6 +226,37 @@ class Auth extends BaseController
             );
         }
 
+        // 3b. Global site-wide distributed botnet signup circuit breakers (across ALL IPs combined)
+        $globalRegAttempt = $guard->hitBucket('global_reg_attempt', 'site', 20, 900, false);
+        if (!$globalRegAttempt['allowed']) {
+            $guard->logSecurityEvent('REGISTER_GLOBAL_CAP', 'critical', null, 'Burst pendaftaran global tercapai (20/15m)', $this->request);
+            return $guard->tooManyRequestsResponse(
+                $this->request,
+                'Pendaftaran akun sedang dibatasi sementara karena lonjakan traffic. Coba beberapa menit lagi.',
+                $globalRegAttempt['retry_after']
+            );
+        }
+
+        $globalDbShort = $guard->checkDbGlobalQuota('register_ok', 12, 900);
+        if (!$globalDbShort['allowed']) {
+            $guard->logSecurityEvent('REGISTER_GLOBAL_CAP', 'critical', null, 'Kuota pendaftaran global 15m tercapai (12/15m)', $this->request);
+            return $guard->tooManyRequestsResponse(
+                $this->request,
+                'Antrean pendaftaran akun sedang penuh sementara. Silakan coba lagi sebentar.',
+                $globalDbShort['retry_after']
+            );
+        }
+
+        $globalDbDaily = $guard->checkDbGlobalQuota('register_ok', 25, 86400);
+        if (!$globalDbDaily['allowed']) {
+            $guard->logSecurityEvent('REGISTER_GLOBAL_CAP', 'critical', null, 'Kuota pendaftaran global harian tercapai (25/24j)', $this->request);
+            return $guard->tooManyRequestsResponse(
+                $this->request,
+                'Batas pendaftaran akun harian sistem tercapai sementara.',
+                $globalDbDaily['retry_after']
+            );
+        }
+
         $nama  = trim((string) $this->request->getPost('nama'));
         $email = strtolower(trim((string) $this->request->getPost('email')));
         $pass  = (string) $this->request->getPost('password');

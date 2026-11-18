@@ -63,7 +63,9 @@ public function index()
         $pendingRequests = (int) $db->table('user_requests')->where('status', 'pending')->countAllResults();
         $auditSummary    = (new SecurityGuard())->getSecurityAuditPage('', '', 1, 1);
         $alerts24h       = (int) (($auditSummary['stats_24h']['warning'] ?? 0) + ($auditSummary['stats_24h']['critical'] ?? 0));
-        $announcement    = (new SiteSettingService())->getAnnouncement();
+        $siteSettings    = new SiteSettingService();
+        $announcement    = $siteSettings->getAnnouncement();
+        $underAttack     = $siteSettings->getUnderAttackStatus();
 
         $data = [
             'title'             => 'Manajemen Pengguna',
@@ -85,6 +87,7 @@ public function index()
                 'alerts_24h'       => $alerts24h,
             ],
             'announcement'      => $announcement,
+            'under_attack'      => $underAttack,
         ];
 
         return view('admin/user_list', $data);
@@ -452,8 +455,9 @@ public function exportCSV()
         $search   = trim((string) $this->request->getGet('q'));
         $page     = max(1, (int) ($this->request->getGet('page') ?? 1));
 
-        $guard  = new SecurityGuard();
-        $result = $guard->getSecurityAuditPage($severity, $search, $page, 30);
+        $guard     = new SecurityGuard();
+        $result    = $guard->getSecurityAuditPage($severity, $search, $page, 30);
+        $rateStats = $guard->getRateLimitStats();
 
         return view('admin/security_logs', [
             'title'         => 'Security Audit Log',
@@ -463,6 +467,8 @@ public function exportCSV()
             'page'          => $result['page'],
             'page_count'    => $result['page_count'],
             'stats_24h'     => $result['stats_24h'],
+            'rate_stats'    => $rateStats,
+            'under_attack'  => (new SiteSettingService())->getUnderAttackStatus(),
             'severity_now'  => $severity,
             'search_q'      => $search,
         ]);
@@ -485,6 +491,25 @@ public function exportCSV()
         );
 
         return redirect()->to('/admin/security-logs')->with('pesan', $deleted . ' log lama (> 7 hari) berhasil dibersihkan.');
+    }
+
+    public function unbanAllIps()
+    {
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to('/')->with('error', 'Akses ditolak!');
+        }
+
+        $guard   = new SecurityGuard();
+        $cleared = $guard->clearAllRateLimits();
+        $guard->logSecurityEvent(
+            'ADMIN_RESET_SHIELDS',
+            'warning',
+            session()->get('email'),
+            'Mereset ' . $cleared . ' file blokir IP / rate-limit aktif',
+            $this->request
+        );
+
+        return redirect()->to('/admin/security-logs')->with('pesan', $cleared . ' blokir IP & counter rate-limit aktif berhasil direset.');
     }
 
     public function redeemCodes()
@@ -609,6 +634,27 @@ public function exportCSV()
         );
 
         return redirect()->to('/admin')->with('pesan', $result['message']);
+    }
+
+    public function toggleUnderAttack()
+    {
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to('/')->with('error', 'Akses ditolak!');
+        }
+
+        $enabled = $this->request->getPost('enabled') === '1';
+        $result  = (new SiteSettingService())->setUnderAttackMode($enabled);
+
+        (new SecurityGuard())->logSecurityEvent(
+            $enabled ? 'ADMIN_UNDER_ATTACK_ON' : 'ADMIN_UNDER_ATTACK_OFF',
+            $enabled ? 'warning' : 'info',
+            session()->get('email'),
+            $result['message'],
+            $this->request
+        );
+
+        $redirectTo = $this->request->getPost('back') === 'logs' ? '/admin/security-logs' : '/admin';
+        return redirect()->to($redirectTo)->with('pesan', $result['message']);
     }
 
     public function getNotifCount()

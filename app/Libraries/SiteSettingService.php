@@ -138,4 +138,61 @@ class SiteSettingService
             'message' => $active ? 'Banner pengumuman diaktifkan di halaman beranda.' : 'Banner pengumuman dinonaktifkan.',
         ];
     }
+
+    /**
+     * Get live Under-Attack / PoW Shield status (file-flag backed for zero-DB filter speed).
+     *
+     * @return array{manual: bool, auto: bool, active: bool}
+     */
+    public function getUnderAttackStatus(): array
+    {
+        $guard  = new SecurityGuard();
+        $manual = $guard->isManualUnderAttack();
+        $auto   = $guard->isAutoShieldActive();
+        return [
+            'manual' => $manual,
+            'auto'   => $auto,
+            'active' => $manual || $auto,
+        ];
+    }
+
+    /**
+     * Enable or disable manual Under-Attack PoW Shield and persist setting record.
+     *
+     * @return array{ok: bool, message: string}
+     */
+    public function setUnderAttackMode(bool $enabled): array
+    {
+        (new SecurityGuard())->setManualUnderAttackFlag($enabled);
+
+        try {
+            $this->ensureTable();
+            $db     = \Config\Database::connect();
+            $now    = date('Y-m-d H:i:s');
+            $json   = (string) json_encode(['enabled' => $enabled]);
+            $exists = $db->table('site_settings')->where('setting_key', 'under_attack_mode')->countAllResults();
+
+            if ($exists > 0) {
+                $db->table('site_settings')->where('setting_key', 'under_attack_mode')->update([
+                    'setting_value' => $json,
+                    'updated_at'    => $now,
+                ]);
+            } else {
+                $db->table('site_settings')->insert([
+                    'setting_key'   => 'under_attack_mode',
+                    'setting_value' => $json,
+                    'updated_at'    => $now,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            log_message('error', '[SiteSettingService] Under-Attack DB persist skipped: ' . $e->getMessage());
+        }
+
+        return [
+            'ok'      => true,
+            'message' => $enabled
+                ? 'UNDER ATTACK MODE DIAKTIFKAN: Semua pengunjung baru wajib verifikasi browser SHA-256.'
+                : 'Under Attack Mode dinonaktifkan. Traffic berjalan normal.',
+        ];
+    }
 }

@@ -88,25 +88,51 @@ class XonApiService
      */
     public function checkEmail(string $email): array
     {
-        $encodedEmail = rawurlencode($email);
+        $normalizedEmail = strtolower(trim($email));
+        $cache           = Services::cache();
+        $emailCacheKey   = 'xon_email_res_' . md5($normalizedEmail);
+
+        $cachedResult = $cache->get($emailCacheKey);
+        if (is_array($cachedResult) && in_array($cachedResult['status'] ?? '', ['pwned', 'safe'], true)) {
+            return $cachedResult;
+        }
+
+        // Global outbound API circuit breaker to protect shared-hosting workers & upstream quota
+        $apiCap = (new SecurityGuard())->hitBucket('global_xon_api', 'site', 35, 60, false);
+        if (!$apiCap['allowed']) {
+            return [
+                'status'       => 'error',
+                'details'      => [],
+                'total_breach' => 0,
+                'message'      => 'Server sedang memproses banyak antrean pengecekan. Coba beberapa detik lagi.',
+                'http_code'    => 429,
+            ];
+        }
+
+        $encodedEmail = rawurlencode($normalizedEmail);
 
         try {
             // Gunakan URL absolut secara eksplisit untuk mencegah CI4 CURLRequest
             // memotong '/v1' dari baseURI berdasarkan standar RFC URI resolution.
             $fullUrl = $this->baseUrl . "/breach-analytics?email={$encodedEmail}";
-            
-            $response   = $this->client->get($fullUrl);
+
+            $response   = $this->client->get($fullUrl, ['timeout' => 5, 'connect_timeout' => 3]);
             $statusCode = $response->getStatusCode();
 
-
             // Gunakan match() — lebih ekspresif dan type-safe dibanding switch
-            return match (true) {
+            $result = match (true) {
                 $statusCode === 200 => $this->handlePwnedResponse($response->getBody()),
                 $statusCode === 404 => $this->buildSafeResponse(),
                 $statusCode === 400 => $this->buildBadRequestResponse(),
                 $statusCode === 429 => $this->buildRateLimitResponse(),
                 default             => $this->buildGenericErrorResponse($statusCode),
             };
+
+            if (in_array($result['status'] ?? '', ['pwned', 'safe'], true)) {
+                $cache->save($emailCacheKey, $result, 60);
+            }
+
+            return $result;
 
         } catch (\CodeIgniter\HTTP\Exceptions\HTTPException $e) {
             // Error jaringan: timeout, DNS gagal, koneksi ditolak, dll.

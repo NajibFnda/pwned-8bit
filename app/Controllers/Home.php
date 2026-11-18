@@ -73,7 +73,7 @@ class Home extends BaseController
         $is_logged_in = $session->get('logged_in');
 
         if (!$is_logged_in) {
-            $usage_count = $this->getGuestUsageCount();
+            $usage_count = $this->getGuestUsageCount(true);
             $usage_limit = 2;
             
             if ($usage_count >= $usage_limit) {
@@ -188,7 +188,17 @@ class Home extends BaseController
             ]);
         }
 
-        $userId   = (int) $session->get('id');
+        $userId      = (int) $session->get('id');
+        $globalBurst = $guard->hitBucket('global_contact_15m', 'site', 20, 900, false);
+        if (!$globalBurst['allowed']) {
+            return $guard->tooManyRequestsResponse(
+                $this->request,
+                'Antrean layanan Contact Admin sedang penuh sementara. Silakan coba lagi sebentar.',
+                $globalBurst['retry_after'],
+                true
+            );
+        }
+
         $burstLim = $guard->hitBucket('contact_ip_10m', $ipKey, 6, 600, true, $ipKey);
         if (!$burstLim['allowed']) {
             return $guard->tooManyRequestsResponse(
@@ -215,6 +225,16 @@ class Home extends BaseController
                 $this->request,
                 'Batas pengiriman pesan harian tercapai (maks 5 permintaan / 24 jam).',
                 $dailyLim['retry_after'],
+                true
+            );
+        }
+
+        $globalDb = $guard->checkDbGlobalQuota('contact_req', 15, 900);
+        if (!$globalDb['allowed']) {
+            return $guard->tooManyRequestsResponse(
+                $this->request,
+                'Terlalu banyak permintaan masuk ke server. Silakan coba beberapa menit lagi.',
+                $globalDb['retry_after'],
                 true
             );
         }
@@ -660,7 +680,7 @@ class Home extends BaseController
             ->with('upgrade_info', 'Pembayaran otomatis belum tersedia. Silakan hubungi Admin melalui tombol Contact Admin untuk aktivasi paket.');
     }
 
-    private function getGuestUsageCount(): int
+    private function getGuestUsageCount(bool $checkDb = false): int
     {
         $session    = session();
         $sessionCnt = (int) ($session->get('guest_usage_count') ?? 0);
@@ -668,7 +688,12 @@ class Home extends BaseController
         $ipKey      = $guard->getIpKey($this->request);
         $cacheKey   = 'guest_quota_' . $ipKey . '_' . date('Y-m-d');
         $ipCnt      = (int) (cache()->get($cacheKey) ?? 0);
-        $dbInfo     = $guard->checkDbQuota('guest_check', $ipKey, 2, 86400);
+
+        if (!$checkDb) {
+            return max($sessionCnt, $ipCnt);
+        }
+
+        $dbInfo = $guard->checkDbQuota('guest_check', $ipKey, 2, 86400);
 
         return max($sessionCnt, $ipCnt, (int) ($dbInfo['count'] ?? 0));
     }

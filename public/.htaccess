@@ -21,6 +21,17 @@ Options -Indexes
 	RewriteCond %{HTTP_USER_AGENT} (sqlmap|nikto|nuclei|masscan|acunetix|dirbuster|gobuster|wpscan|zgrab|nessus|havij) [NC]
 	RewriteRule .* - [F,L]
 
+	# Reject bloated/cache-busting or exploit query strings before invoking PHP
+	RewriteCond %{QUERY_STRING} ^.{512,}$ [OR]
+	RewriteCond %{QUERY_STRING} (union.*select|benchmark\(|sleep\(|<script|%3cscript|\.\./\.\.) [NC]
+	RewriteRule .* - [F,L]
+
+	# Reject headless POST requests with empty User-Agent (except payment webhooks)
+	RewriteCond %{REQUEST_METHOD} ^POST$ [NC]
+	RewriteCond %{REQUEST_URI} !^/?(public/)?midtrans/webhook$ [NC]
+	RewriteCond %{HTTP_USER_AGENT} ^$
+	RewriteRule .* - [F,L]
+
 	# If you installed CodeIgniter in a subfolder, you will need to
 	# change the following line to match the subfolder you need.
 	# http://httpd.apache.org/docs/current/mod/mod_rewrite.html#rewritebase
@@ -57,3 +68,9 @@ Options -Indexes
 # Disable server signature start
 ServerSignature Off
 # Disable server signature end
+
+<IfModule mod_headers.c>
+	<FilesMatch "\.(jpg|jpeg|png|gif|ico|webp|svg)$">
+		Header set Cache-Control "public, max-age=604800"
+	</FilesMatch>
+</IfModule>

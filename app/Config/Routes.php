@@ -26,6 +26,7 @@ $routes->post('upgrade/nota/(:num)/cancel', 'Home::cancelUpgrade/$1');
 $routes->get('upgrade/nota/(:num)/success', 'Home::successLokal/$1');
 $routes->get('upgrade/nota/(:num)', 'Home::nota/$1');
 $routes->post('midtrans/webhook', 'Home::midtransWebhook');
+$routes->post('__shield-verify', static fn() => '');
 
 // ─── Auth Routes ──────────────────────────────────────────────────────────────
 $routes->get('/captcha/(:segment)', 'Auth::captcha/$1');
@@ -58,6 +59,8 @@ $routes->group('admin', function($routes) {
     // Security Audit Logs & Announcement
     $routes->get('security-logs', 'AdminController::securityLogs');
     $routes->post('security-logs/clear', 'AdminController::clearOldSecurityLogs');
+    $routes->post('security-logs/unban-all', 'AdminController::unbanAllIps');
     $routes->post('announcement', 'AdminController::saveAnnouncement');
+    $routes->post('under-attack', 'AdminController::toggleUnderAttack');
     $routes->get('notif-count', 'AdminController::getNotifCount');
 });

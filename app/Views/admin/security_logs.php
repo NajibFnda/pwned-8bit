@@ -57,12 +57,22 @@
             <a href="<?= base_url('admin/security-logs?severity=critical') ?>" class="px-3 py-2 <?= ($severity_now ?? '') === 'critical' ? 'bg-red-600 text-white' : 'text-black hover:bg-gray-200' ?>">Critical</a>
         </div>
 
-        <form method="POST" action="<?= base_url('admin/security-logs/clear') ?>" onsubmit="return confirm('Hapus log keamanan yang berumur lebih dari 7 hari?');">
-            <?= csrf_field() ?>
-            <button type="submit" class="bg-red-600 hover:bg-red-800 text-white px-3 py-2.5 text-[10px] font-pixel uppercase border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]">
-                BERSIHKAN (&gt;7 HARI)
-            </button>
-        </form>
+        <div class="flex flex-wrap gap-2">
+            <?php $rs = $rate_stats ?? ['active_bans' => 0, 'active_buckets' => 0]; ?>
+            <form method="POST" action="<?= base_url('admin/security-logs/unban-all') ?>" onsubmit="return confirm('Reset semua ban IP sementara & bucket rate-limit aktif?');">
+                <?= csrf_field() ?>
+                <button type="submit" class="bg-yellow-400 hover:bg-yellow-500 text-black px-3 py-2.5 text-[10px] font-pixel uppercase border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+                    UNBAN IP (<?= (int) ($rs['active_bans'] ?? 0) ?>)
+                </button>
+            </form>
+
+            <form method="POST" action="<?= base_url('admin/security-logs/clear') ?>" onsubmit="return confirm('Hapus log keamanan yang berumur lebih dari 7 hari?');">
+                <?= csrf_field() ?>
+                <button type="submit" class="bg-red-600 hover:bg-red-800 text-white px-3 py-2.5 text-[10px] font-pixel uppercase border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+                    BERSIHKAN (&gt;7 HARI)
+                </button>
+            </form>
+        </div>
     </div>
 </div>
 

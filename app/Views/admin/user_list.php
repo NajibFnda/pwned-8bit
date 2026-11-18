@@ -57,6 +57,34 @@
     </a>
 </div>
 
+<!-- DDoS Shield / Under-Attack Mode -->
+<?php $ua = $under_attack ?? ['manual' => false, 'auto' => false, 'active' => false]; ?>
+<div class="bg-white border-4 border-black p-4 shadow-[6px_6px_0px_rgba(0,0,0,1)] mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+        <div class="flex items-center gap-2">
+            <span class="font-pixel text-xs uppercase text-black">&gt; ANTI-DDOS PROOF-OF-WORK SHIELD</span>
+            <?php if (!empty($ua['manual'])): ?>
+                <span class="px-2 py-0.5 text-[9px] font-pixel border-2 border-black bg-red-600 text-white uppercase">MANUAL ON</span>
+            <?php elseif (!empty($ua['auto'])): ?>
+                <span class="px-2 py-0.5 text-[9px] font-pixel border-2 border-black bg-yellow-400 text-black uppercase">AUTO-SURGE ON</span>
+            <?php else: ?>
+                <span class="px-2 py-0.5 text-[9px] font-pixel border-2 border-black bg-green-600 text-white uppercase">STANDBY</span>
+            <?php endif; ?>
+        </div>
+        <p class="text-[11px] font-bold text-gray-600 uppercase mt-1">
+            Saat aktif (atau saat lonjakan &gt;120 req/10d), pengunjung baru wajib lolos tantangan kriptografi browser SHA-256 sebelum menyentuh PHP/MySQL.
+        </p>
+    </div>
+    <form method="POST" action="<?= base_url('admin/under-attack') ?>" class="shrink-0">
+        <?= csrf_field() ?>
+        <input type="hidden" name="enabled" value="<?= !empty($ua['manual']) ? '0' : '1' ?>">
+        <button type="submit"
+            class="px-4 py-2.5 text-[10px] font-pixel uppercase border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] <?= !empty($ua['manual']) ? 'bg-gray-200 hover:bg-gray-300 text-black' : 'bg-red-600 hover:bg-red-700 text-white' ?>">
+            <?= !empty($ua['manual']) ? 'MATIKAN UNDER-ATTACK' : 'AKTIFKAN UNDER-ATTACK' ?>
+        </button>
+    </form>
+</div>
+
 <!-- Pengumuman Website (Banner Beranda) -->
 <?php $ann = $announcement ?? ['active' => false, 'title' => 'PENGUMUMAN', 'message' => '', 'style' => 'info']; ?>
 <div class="bg-white border-4 border-black p-5 shadow-[6px_6px_0px_rgba(0,0,0,1)] mb-10">
