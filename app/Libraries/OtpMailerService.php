@@ -116,10 +116,12 @@ class OtpMailerService
             'from_email'           => $cfg['from_email'],
             'from_name'            => $cfg['from_name'],
             'has_brevo_key'        => $cfg['brevo_api_key'] !== '',
+            'brevo_key_len'        => strlen($cfg['brevo_api_key']),
             'smtp_host'            => $cfg['smtp_host'],
             'smtp_port'            => $cfg['smtp_port'],
             'smtp_user'            => $cfg['smtp_user'],
             'has_smtp_pass'        => $cfg['smtp_pass'] !== '',
+            'smtp_pass_len'        => strlen(preg_replace('/\s+/', '', $cfg['smtp_pass']) ?? $cfg['smtp_pass']),
             'require_register_otp' => $cfg['require_register_otp'],
             'is_configured'        => $this->isConfigured($cfg),
         ];
