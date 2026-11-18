@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nota Pembayaran - PWNED</title>
+    <?= view('partials/favicon_head') ?>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <?php if (env('MIDTRANS_IS_PRODUCTION') === 'true'): ?>
