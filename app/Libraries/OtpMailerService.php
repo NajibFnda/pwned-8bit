@@ -169,7 +169,13 @@ class OtpMailerService
             ? $this->encryptSecret($newBrevoKey)
             : (string) ($current['brevo_api_key_enc'] ?? '');
 
-        $newSmtpPass = (string) ($input['smtp_pass'] ?? '');
+        $newSmtpPass = trim((string) ($input['smtp_pass'] ?? ''));
+        if ($newSmtpPass !== '' && str_contains(strtolower($smtpHost), 'gmail')) {
+            $compactPass = preg_replace('/\s+/', '', $newSmtpPass);
+            if ($compactPass !== null && strlen($compactPass) === 16) {
+                $newSmtpPass = $compactPass;
+            }
+        }
         $smtpPassEnc = $newSmtpPass !== ''
             ? $this->encryptSecret($newSmtpPass)
             : (string) ($current['smtp_pass_enc'] ?? '');
@@ -190,6 +196,9 @@ class OtpMailerService
         if ($driver === 'smtp') {
             if ($smtpHost === '' || $smtpUser === '') {
                 return ['ok' => false, 'message' => 'SMTP Host dan SMTP Username wajib diisi.'];
+            }
+            if (strtolower($smtpUser) === strtolower($smtpHost)) {
+                return ['ok' => false, 'message' => 'SMTP Username harus diisi alamat email login (contoh: emailanda@gmail.com), bukan alamat host "' . $smtpHost . '".'];
             }
             if (!filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
                 return ['ok' => false, 'message' => 'From Email atau SMTP Username harus berupa alamat email yang valid.'];
@@ -390,11 +399,19 @@ HTML;
                 default => 'tls',
             };
 
+            $smtpPass = (string) $cfg['smtp_pass'];
+            if (str_contains(strtolower((string) $cfg['smtp_host']), 'gmail')) {
+                $compact = preg_replace('/\s+/', '', $smtpPass);
+                if ($compact !== null && strlen($compact) === 16) {
+                    $smtpPass = $compact;
+                }
+            }
+
             $email->initialize([
                 'protocol'    => 'smtp',
                 'SMTPHost'    => $cfg['smtp_host'],
                 'SMTPUser'    => $cfg['smtp_user'],
-                'SMTPPass'    => $cfg['smtp_pass'],
+                'SMTPPass'    => $smtpPass,
                 'SMTPPort'    => $port,
                 'SMTPCrypto'  => $crypto,
                 'SMTPTimeout' => 8,
@@ -417,12 +434,19 @@ HTML;
             }
 
             $dbg = trim(strip_tags((string) $email->printDebugger(['headers'])));
-            log_message('error', '[OtpMailerService] SMTP gagal: ' . mb_substr($dbg, 0, 400));
+            log_message('error', '[OtpMailerService] SMTP gagal: ' . mb_substr($dbg, 0, 500));
+
+            $shortDbg = $dbg;
+            if (preg_match('/(Failed to authenticate[^\n\r]*|Unable to send email[^\n\r]*|\b5\d{2}[\s-].*)/i', $dbg, $dm)) {
+                $shortDbg = trim($dm[1]);
+            } elseif (mb_strlen($dbg) > 220) {
+                $shortDbg = mb_substr($dbg, -220);
+            }
 
             return [
                 'ok'      => false,
                 'message' => 'Gagal mengirim email via SMTP Port ' . $port . '.',
-                'debug'   => mb_substr($dbg, 0, 240),
+                'debug'   => mb_substr($shortDbg, 0, 220),
             ];
         } catch (\Throwable $e) {
             log_message('error', '[OtpMailerService] SMTP exception: ' . $e->getMessage());

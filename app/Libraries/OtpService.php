@@ -90,16 +90,18 @@ class OtpService
             ];
         }
 
-        // 1. Strict anti-email-bombing & outbound quota circuit breakers
-        $cooldown = $this->guard->hitBucket('otp_cd_' . $purpose, $email, 1, self::RESEND_COOLDOWN, false);
-        if (!$cooldown['allowed']) {
+        // 1. Check resend cooldown BEFORE counting quota (cooldown is only stamped on successful delivery)
+        $cdRemaining = $this->getResendCooldownRemaining($purpose, $email);
+        if ($cdRemaining > 0) {
             return [
                 'ok'          => false,
-                'retry_after' => $cooldown['retry_after'],
-                'message'     => 'Tunggu ' . $cooldown['retry_after'] . ' detik sebelum mengirim ulang OTP.',
+                'retry_after' => $cdRemaining,
+                'message'     => 'Tunggu ' . $cdRemaining . ' detik sebelum mengirim ulang OTP.',
                 'code_sent'   => false,
             ];
         }
+
+        // Strict anti-email-bombing & outbound quota circuit breakers
 
         $ipLim = $this->guard->hitBucket('otp_send_ip', $ipKey, 5, 900, true, $ipKey);
         if (!$ipLim['allowed']) {
@@ -196,6 +198,9 @@ class OtpService
                 'code_sent'   => false,
             ];
         }
+
+        // Record 60s resend cooldown only after confirmed email dispatch
+        $this->guard->hitBucket('otp_cd_' . $purpose, $email, 1, self::RESEND_COOLDOWN, false);
 
         return [
             'ok'          => true,
