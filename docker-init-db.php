@@ -107,6 +107,19 @@ $queries = [
         KEY `idx_rate_lookup` (`action`,`ip_hash`,`created_at`),
         KEY `idx_rate_actor` (`action`,`actor_id`,`created_at`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci",
+
+    "CREATE TABLE IF NOT EXISTS `security_logs` (
+        `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+        `event_type` varchar(50) NOT NULL,
+        `severity` enum('info','warning','critical') NOT NULL DEFAULT 'info',
+        `actor_email` varchar(150) DEFAULT NULL,
+        `ip_address` varchar(64) NOT NULL,
+        `detail` varchar(255) NOT NULL DEFAULT '',
+        `created_at` datetime NOT NULL,
+        PRIMARY KEY (`id`),
+        KEY `idx_sec_event_time` (`event_type`,`created_at`),
+        KEY `idx_sec_severity_time` (`severity`,`created_at`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci",
 ];
 
 foreach ($queries as $sql) {

@@ -105,7 +105,7 @@
 
             <div>
                 <label for="cp_email" class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">> EMAIL ADDRESS</label>
-                <input type="email" id="cp_email" name="email" required value="<?= esc(old('email')) ?>" placeholder="contoh@gmail.com"
+                <input type="email" id="cp_email" name="email" required value="<?= esc($old_cp_email ?? old('email')) ?>" placeholder="contoh@gmail.com"
                     class="w-full px-4 py-3 bg-white text-black border-2 border-black focus:outline-none focus:bg-gray-100 font-bold placeholder-gray-400">
             </div>
 
@@ -117,15 +117,34 @@
 
             <div>
                 <label for="new_password" class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">> SANDI BARU</label>
-                <input type="password" id="new_password" name="new_password" required minlength="6" placeholder="Min. 6 karakter"
+                <input type="password" id="new_password" name="new_password" required minlength="8" placeholder="Min. 8 karakter (huruf + angka)"
                     class="w-full px-4 py-3 bg-white text-black border-2 border-black focus:outline-none focus:bg-gray-100 font-bold placeholder-gray-400">
             </div>
 
             <div>
                 <label for="confirm_password" class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">> KONFIRMASI SANDI BARU</label>
-                <input type="password" id="confirm_password" name="confirm_password" required minlength="6" placeholder="Ulangi sandi baru"
+                <input type="password" id="confirm_password" name="confirm_password" required minlength="8" placeholder="Ulangi sandi baru"
                     class="w-full px-4 py-3 bg-white text-black border-2 border-black focus:outline-none focus:bg-gray-100 font-bold placeholder-gray-400">
             </div>
+
+            <?php if (!empty($turnstile_site_key)): ?>
+                <div class="cf-turnstile" data-sitekey="<?= esc($turnstile_site_key) ?>"></div>
+            <?php else: ?>
+                <div>
+                    <label for="cp_captcha_code" class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">> VERIFIKASI KEAMANAN (CAPTCHA)</label>
+                    <div class="flex items-center gap-2 mb-2">
+                        <img id="cp-captcha-img" src="" alt="CAPTCHA"
+                            class="border-2 border-black bg-gray-100 h-14 w-[180px] object-contain">
+                        <button type="button" onclick="refreshCpCaptcha()"
+                            class="px-3 py-3 bg-gray-200 hover:bg-black hover:text-white border-2 border-black font-pixel text-[8px] uppercase">
+                            REFRESH
+                        </button>
+                    </div>
+                    <input type="text" id="cp_captcha_code" name="captcha_code" required maxlength="5" autocomplete="off"
+                        placeholder="KETIK 5 KODE DI ATAS"
+                        class="w-full px-4 py-3 bg-white text-black border-2 border-black focus:outline-none focus:bg-gray-100 font-bold uppercase tracking-widest placeholder-gray-400">
+                </div>
+            <?php endif; ?>
 
             <button type="submit"
                 class="w-full bg-black hover:bg-blue-700 text-white font-pixel text-[10px] px-6 py-4 border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-none flex justify-center items-center gap-2 mt-4">
@@ -148,6 +167,13 @@
     </div>
 
     <script>
+        function refreshCpCaptcha() {
+            const img = document.getElementById('cp-captcha-img');
+            if (img) {
+                img.src = '<?= base_url('captcha/changepwd') ?>?t=' + Date.now();
+            }
+        }
+
         function toggleMode(mode) {
             const formLogin  = document.getElementById('form-login');
             const formChange = document.getElementById('form-change-pwd');
@@ -158,6 +184,7 @@
                 formChange.classList.remove('hidden');
                 btnSwitch.textContent = 'KEMBALI KE LOGIN';
                 btnSwitch.onclick = () => toggleMode('login');
+                refreshCpCaptcha();
             } else {
                 formChange.classList.add('hidden');
                 formLogin.classList.remove('hidden');
@@ -166,7 +193,8 @@
             }
         }
 
-        if (new URLSearchParams(window.location.search).get('mode') === 'change') {
+        const openChange = <?= !empty($open_change_mode) ? 'true' : 'false' ?>;
+        if (openChange || new URLSearchParams(window.location.search).get('mode') === 'change') {
             toggleMode('change');
         }
     </script>

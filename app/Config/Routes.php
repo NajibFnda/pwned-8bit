@@ -45,5 +45,8 @@ $routes->group('admin', function($routes) {
     $routes->get('requests', 'AdminController::requests');
     $routes->post('requests/approve/(:num)', 'AdminController::approveRequest/$1');
     $routes->post('requests/reject/(:num)', 'AdminController::rejectRequest/$1');
+    // Security Audit Logs
+    $routes->get('security-logs', 'AdminController::securityLogs');
+    $routes->post('security-logs/clear', 'AdminController::clearOldSecurityLogs');
     $routes->get('notif-count', 'AdminController::getNotifCount');
 });

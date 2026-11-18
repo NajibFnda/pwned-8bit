@@ -56,7 +56,7 @@
 
             <div>
                 <label for="password" class="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">> PASSWORD</label>
-                <input type="password" id="password" name="password" required minlength="6" placeholder="Min 6 characters"
+                <input type="password" id="password" name="password" required minlength="8" placeholder="Min 8 chars (huruf + angka)"
                     class="w-full px-4 py-3 bg-white text-black border-2 border-black focus:outline-none focus:bg-gray-100 font-bold placeholder-gray-400">
             </div>
 

@@ -1,5 +1,6 @@
 <?php
 namespace App\Controllers;
+use App\Libraries\SecurityGuard;
 use App\Models\UserModel;
 
 
@@ -85,6 +86,13 @@ public function index()
         }
 
         $this->deleteUserRecords([$targetId]);
+        (new SecurityGuard())->logSecurityEvent(
+            'ADMIN_DELETE_USER',
+            'warning',
+            session()->get('email'),
+            'Menghapus user #' . $targetId . ' (' . ($target['email'] ?? '') . ')',
+            $this->request
+        );
 
         return redirect()->to('/admin')->with('pesan', 'Akun #' . $targetId . ' (' . $target['email'] . ') berhasil dihapus.');
     }
@@ -126,6 +134,13 @@ public function index()
         }
 
         $this->deleteUserRecords($spamIds);
+        (new SecurityGuard())->logSecurityEvent(
+            'ADMIN_CLEANUP_SPAM',
+            'warning',
+            session()->get('email'),
+            'Membersihkan ' . count($spamIds) . ' akun spam bot',
+            $this->request
+        );
 
         return redirect()->to('/admin')->with('pesan', count($spamIds) . ' akun spam bot berhasil dibersihkan.');
     }
@@ -164,6 +179,14 @@ public function index()
             'expire_date'       => ($plan === 'free' || empty($expire)) ? null : $expire,
             'pending_plan'      => null,
         ]);
+
+        (new SecurityGuard())->logSecurityEvent(
+            'ADMIN_UPDATE_PLAN',
+            'info',
+            session()->get('email'),
+            'Mengubah paket user #' . (int) $id . ' -> ' . strtoupper($plan),
+            $this->request
+        );
 
         return redirect()->to('/admin')->with('pesan', 'Status langganan berhasil diperbarui!');
     }
@@ -237,6 +260,14 @@ public function sales()
                 'expire_date'       => $expireDate,
                 'pending_plan'      => null,
             ]);
+
+            (new SecurityGuard())->logSecurityEvent(
+                'ADMIN_VERIFY_TRX',
+                'info',
+                session()->get('email'),
+                'Verifikasi transaksi #' . (int) $id . ' (' . strtoupper((string) $trx['paket']) . ')',
+                $this->request
+            );
         }
 
         return redirect()->to('/admin/sales')->with('pesan', 'Transaksi #' . (int) $id . ' berhasil diverifikasi LUNAS.');
@@ -336,6 +367,14 @@ public function exportCSV()
             ]);
         }
 
+        (new SecurityGuard())->logSecurityEvent(
+            'ADMIN_APPROVE_REQ',
+            'info',
+            session()->get('email'),
+            'Menyetujui request #' . (int) $id . ' (' . $jenis . ') untuk user #' . (int) $req['user_id'],
+            $this->request
+        );
+
         return redirect()->to('/admin/requests')->with('pesan', 'Request #' . (int) $id . ' berhasil disetujui.');
     }
 
@@ -351,7 +390,60 @@ public function exportCSV()
             'updated_at' => date('Y-m-d H:i:s'),
         ]);
 
+        (new SecurityGuard())->logSecurityEvent(
+            'ADMIN_REJECT_REQ',
+            'info',
+            session()->get('email'),
+            'Menolak request #' . (int) $id,
+            $this->request
+        );
+
         return redirect()->to('/admin/requests')->with('pesan', 'Request #' . (int) $id . ' ditolak.');
+    }
+
+    public function securityLogs()
+    {
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to('/')->with('error', 'Akses ditolak!');
+        }
+
+        $severity = trim((string) $this->request->getGet('severity'));
+        $search   = trim((string) $this->request->getGet('q'));
+        $page     = max(1, (int) ($this->request->getGet('page') ?? 1));
+
+        $guard  = new SecurityGuard();
+        $result = $guard->getSecurityAuditPage($severity, $search, $page, 30);
+
+        return view('admin/security_logs', [
+            'title'         => 'Security Audit Log',
+            'active'        => 'security_logs',
+            'logs'          => $result['logs'],
+            'total_logs'    => $result['total'],
+            'page'          => $result['page'],
+            'page_count'    => $result['page_count'],
+            'stats_24h'     => $result['stats_24h'],
+            'severity_now'  => $severity,
+            'search_q'      => $search,
+        ]);
+    }
+
+    public function clearOldSecurityLogs()
+    {
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to('/')->with('error', 'Akses ditolak!');
+        }
+
+        $guard   = new SecurityGuard();
+        $deleted = $guard->clearOldSecurityLogs(7);
+        $guard->logSecurityEvent(
+            'ADMIN_CLEAR_LOGS',
+            'info',
+            session()->get('email'),
+            'Membersihkan ' . $deleted . ' entri log keamanan (> 7 hari)',
+            $this->request
+        );
+
+        return redirect()->to('/admin/security-logs')->with('pesan', $deleted . ' log lama (> 7 hari) berhasil dibersihkan.');
     }
 
     public function getNotifCount()

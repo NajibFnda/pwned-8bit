@@ -20,6 +20,41 @@ class SecurityGuard
     private const BAN_DURATION     = 900; // 15 minutes ban
 
     /**
+     * Common throwaway/disposable domains blocked from creating accounts.
+     */
+    private const DISPOSABLE_DOMAINS = [
+        'mailinator.com', 'yopmail.com', 'yopmail.fr', 'yopmail.net', 'tempmail.com',
+        'temp-mail.org', 'temp-mail.io', 'temp-mail.ru', 'guerrillamail.com', 'guerrillamail.net',
+        'guerrillamail.org', 'guerrillamail.biz', 'sharklasers.com', 'grr.la', 'pokemail.net',
+        '10minutemail.com', '10minutemail.net', '10minutemail.org', 'minutemail.com',
+        'throwawaymail.com', 'throwaway.email', 'trashmail.com', 'trashmail.net', 'trashmail.org',
+        'dispostable.com', 'getnada.com', 'nada.email', 'mohmal.com', 'maildrop.cc',
+        'fakeinbox.com', 'mintemail.com', 'burnermail.io', 'emailondeck.com', 'crazymailing.com',
+        'tempinbox.com', 'mailnesia.com', 'mailcatch.com', 'spamgourmet.com', 'mytemp.email',
+        'tempmailo.com', 'tempmailaddress.com', 'fakemailgenerator.com', 'harakirimail.com',
+        'moakt.com', 'inboxkitten.com', 'dropmail.me', 'incognitomail.com', 'anonbox.net',
+        'spambog.com', 'discard.email', 'mailtemp.net', 'tmail.ws', 'tempr.email',
+        'mail7.io', 'tempail.com', 'tmpmail.org', 'tmpmail.net', 'luxusmail.org',
+        'emailfake.com', 'generator.email', 'mailpoof.com', 'guerrillamailblock.com',
+        'example.com', 'example.net', 'example.org', 'test.com', 'invalid', 'localhost',
+    ];
+
+    /**
+     * Major verified mail providers allowed without extra live DNS latency.
+     */
+    private const TRUSTED_EMAIL_PROVIDERS = [
+        'gmail.com', 'googlemail.com', 'yahoo.com', 'yahoo.co.id', 'ymail.com',
+        'outlook.com', 'hotmail.com', 'live.com', 'msn.com', 'icloud.com',
+        'me.com', 'mac.com', 'proton.me', 'protonmail.com', 'zoho.com',
+        'gmx.com', 'aol.com', 'yandex.com', 'mail.ru',
+    ];
+
+    private const WEAK_PASSWORDS = [
+        '12345678', '123456789', '1234567890', 'password', 'password1', 'password123',
+        'qwerty123', 'admin123', 'admin1234', 'abc12345', 'welcome1', 'iloveyou1',
+    ];
+
+    /**
      * 5x7 crisp bitmap glyphs for unambiguous uppercase alphanumeric characters.
      */
     private const BITMAP_FONT = [
@@ -238,8 +273,11 @@ class SecurityGuard
             $strikes[] = $now;
 
             if ($bannedUntil <= $now && count($strikes) >= self::BAN_STRIKE_LIMIT) {
-                $bannedUntil = $now + self::BAN_DURATION;
-                $strikes     = [];
+                $bannedUntil  = $now + self::BAN_DURATION;
+                $strikes      = [];
+                $newlyBanned  = true;
+            } else {
+                $newlyBanned  = false;
             }
 
             $bannedFor = $bannedUntil > $now ? ($bannedUntil - $now) : 0;
@@ -255,6 +293,15 @@ class SecurityGuard
             flock($fp, LOCK_UN);
         }
         fclose($fp);
+
+        if (!empty($newlyBanned)) {
+            $this->logSecurityEvent(
+                'DDOS_AUTO_BAN',
+                'critical',
+                null,
+                'IP diblokir otomatis 15 menit setelah melewati batas pelanggaran rate-limit.'
+            );
+        }
 
         return $bannedFor;
     }
@@ -714,6 +761,226 @@ HTML;
         if ($marker) {
             @file_put_contents($marker, '1');
         }
+    }
+
+    /**
+     * Validate email domain authenticity: block throwaway domains & check live DNS MX/A records.
+     *
+     * @return array{valid: bool, reason: string}
+     */
+    public function validateEmailDomain(string $email): array
+    {
+        $email = strtolower(trim($email));
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return ['valid' => false, 'reason' => 'Format alamat email tidak valid.'];
+        }
+
+        $atPos  = strrpos($email, '@');
+        $domain = $atPos !== false ? substr($email, $atPos + 1) : '';
+        if ($domain === '' || !str_contains($domain, '.') || str_starts_with($domain, '.') || str_ends_with($domain, '.')) {
+            return ['valid' => false, 'reason' => 'Domain alamat email tidak valid.'];
+        }
+
+        if (str_ends_with($domain, '.local') || str_ends_with($domain, '.test') || str_ends_with($domain, '.invalid')) {
+            return ['valid' => false, 'reason' => 'Domain email lokal/uji coba tidak diperbolehkan.'];
+        }
+
+        foreach (self::DISPOSABLE_DOMAINS as $blocked) {
+            if ($domain === $blocked || str_ends_with($domain, '.' . $blocked)) {
+                return ['valid' => false, 'reason' => 'Email sementara/disposable (' . $domain . ') tidak diperbolehkan. Gunakan email permanen.'];
+            }
+        }
+
+        if (in_array($domain, self::TRUSTED_EMAIL_PROVIDERS, true)) {
+            return ['valid' => true, 'reason' => ''];
+        }
+
+        // Verify live MX/A records only if server DNS itself is reachable (prevents false rejects offline)
+        if (function_exists('checkdnsrr') && @checkdnsrr('gmail.com', 'MX')) {
+            $hasMx = @checkdnsrr($domain, 'MX');
+            $hasA  = $hasMx ? true : @checkdnsrr($domain, 'A');
+            if (!$hasMx && !$hasA) {
+                return ['valid' => false, 'reason' => 'Domain email (' . $domain . ') tidak ditemukan atau tidak menerima email (MX record tidak valid).'];
+            }
+        }
+
+        return ['valid' => true, 'reason' => ''];
+    }
+
+    /**
+     * Enforce strong password requirements (>= 8 chars, mixed letters + numbers, non-trivial).
+     *
+     * @return array{valid: bool, reason: string}
+     */
+    public function validatePasswordStrength(string $password): array
+    {
+        $len = strlen($password);
+        if ($len < 8 || $len > 128) {
+            return ['valid' => false, 'reason' => 'Kata sandi wajib terdiri dari 8 hingga 128 karakter.'];
+        }
+
+        if (!preg_match('/[a-zA-Z]/', $password) || !preg_match('/[0-9]/', $password)) {
+            return ['valid' => false, 'reason' => 'Kata sandi wajib mengandung kombinasi huruf dan angka.'];
+        }
+
+        if (in_array(strtolower($password), self::WEAK_PASSWORDS, true)) {
+            return ['valid' => false, 'reason' => 'Kata sandi terlalu umum. Gunakan kombinasi yang lebih aman.'];
+        }
+
+        return ['valid' => true, 'reason' => ''];
+    }
+
+    /**
+     * Record a security/audit event in MySQL security_logs for Admin visibility.
+     */
+    public function logSecurityEvent(
+        string $eventType,
+        string $severity = 'info',
+        ?string $actorEmail = null,
+        string $detail = '',
+        ?IncomingRequest $request = null
+    ): void {
+        try {
+            $this->ensureSecurityLogsTable();
+            $request ??= service('request');
+            $rawIp = $request instanceof IncomingRequest ? trim((string) $request->getIPAddress()) : 'cli';
+            if ($rawIp === '') {
+                $rawIp = '0.0.0.0';
+            }
+
+            if (!in_array($severity, ['info', 'warning', 'critical'], true)) {
+                $severity = 'info';
+            }
+
+            $db = \Config\Database::connect();
+            $db->table('security_logs')->insert([
+                'event_type'  => substr(strtoupper(trim($eventType)), 0, 50),
+                'severity'    => $severity,
+                'actor_email' => $actorEmail !== null && $actorEmail !== '' ? mb_substr(strtolower(trim($actorEmail)), 0, 150) : null,
+                'ip_address'  => substr($rawIp, 0, 64),
+                'detail'      => mb_substr(trim($detail), 0, 255),
+                'created_at'  => date('Y-m-d H:i:s'),
+            ]);
+
+            if (mt_rand(1, 30) === 1) {
+                $db->table('security_logs')
+                    ->where('created_at <', date('Y-m-d H:i:s', time() - 2592000))
+                    ->delete();
+            }
+        } catch (\Throwable $e) {
+            log_message('error', '[SecurityGuard] Audit log write skipped: ' . $e->getMessage());
+        }
+    }
+
+    private function ensureSecurityLogsTable(): void
+    {
+        $dir    = $this->ensureRateLimitDir();
+        $marker = $dir ? ($dir . DIRECTORY_SEPARATOR . '.logs_ready') : null;
+        if ($marker && is_file($marker)) {
+            return;
+        }
+
+        $db = \Config\Database::connect();
+        $db->query("
+            CREATE TABLE IF NOT EXISTS `security_logs` (
+                `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `event_type` VARCHAR(50) NOT NULL,
+                `severity` ENUM('info','warning','critical') NOT NULL DEFAULT 'info',
+                `actor_email` VARCHAR(150) NULL DEFAULT NULL,
+                `ip_address` VARCHAR(64) NOT NULL,
+                `detail` VARCHAR(255) NOT NULL DEFAULT '',
+                `created_at` DATETIME NOT NULL,
+                PRIMARY KEY (`id`),
+                KEY `idx_sec_event_time` (`event_type`, `created_at`),
+                KEY `idx_sec_severity_time` (`severity`, `created_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+        ");
+
+        if ($marker) {
+            @file_put_contents($marker, '1');
+        }
+    }
+
+    /**
+     * Fetch paginated security audit logs and 24-hour severity counters for Admin Panel.
+     *
+     * @return array{logs: array<int, array<string, mixed>>, total: int, page: int, page_count: int, stats_24h: array<string, int>}
+     */
+    public function getSecurityAuditPage(string $severity = '', string $search = '', int $page = 1, int $perPage = 30): array
+    {
+        $this->ensureSecurityLogsTable();
+        $db   = \Config\Database::connect();
+        $page = max(1, $page);
+
+        $since24h = date('Y-m-d H:i:s', time() - 86400);
+        $statsRows = $db->table('security_logs')
+            ->select('severity, COUNT(*) AS cnt')
+            ->where('created_at >=', $since24h)
+            ->groupBy('severity')
+            ->get()
+            ->getResultArray();
+
+        $stats24h = ['total' => 0, 'info' => 0, 'warning' => 0, 'critical' => 0];
+        foreach ($statsRows as $sr) {
+            $sev = (string) ($sr['severity'] ?? 'info');
+            $cnt = (int) ($sr['cnt'] ?? 0);
+            if (isset($stats24h[$sev])) {
+                $stats24h[$sev] = $cnt;
+            }
+            $stats24h['total'] += $cnt;
+        }
+
+        $applyFilters = static function ($builder) use ($severity, $search): void {
+            if ($severity !== '' && in_array($severity, ['info', 'warning', 'critical'], true)) {
+                $builder->where('severity', $severity);
+            }
+            if ($search !== '') {
+                $builder->groupStart()
+                    ->like('event_type', $search)
+                    ->orLike('actor_email', $search)
+                    ->orLike('ip_address', $search)
+                    ->orLike('detail', $search)
+                    ->groupEnd();
+            }
+        };
+
+        $countBuilder = $db->table('security_logs');
+        $applyFilters($countBuilder);
+        $total = (int) $countBuilder->countAllResults();
+
+        $pageCount = max(1, (int) ceil($total / $perPage));
+        if ($page > $pageCount) {
+            $page = $pageCount;
+        }
+        $offset = ($page - 1) * $perPage;
+
+        $rowsBuilder = $db->table('security_logs');
+        $applyFilters($rowsBuilder);
+        $logs = $rowsBuilder
+            ->orderBy('id', 'DESC')
+            ->limit($perPage, $offset)
+            ->get()
+            ->getResultArray();
+
+        return [
+            'logs'       => $logs,
+            'total'      => $total,
+            'page'       => $page,
+            'page_count' => $pageCount,
+            'stats_24h'  => $stats24h,
+        ];
+    }
+
+    /**
+     * Delete old security logs beyond retention days and return affected rows.
+     */
+    public function clearOldSecurityLogs(int $olderThanDays = 7): int
+    {
+        $this->ensureSecurityLogsTable();
+        $db     = \Config\Database::connect();
+        $cutoff = date('Y-m-d H:i:s', time() - (max(1, $olderThanDays) * 86400));
+        $db->table('security_logs')->where('created_at <', $cutoff)->delete();
+        return (int) $db->affectedRows();
     }
 
     private function pruneStaleBucketFiles(string $dir, int $olderThan): void

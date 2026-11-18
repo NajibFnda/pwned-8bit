@@ -44,5 +44,28 @@ abstract class BaseController extends Controller
         $this->response->setHeader('X-Content-Type-Options', 'nosniff');
         $this->response->setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
         $this->response->setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+
+        $isHttps = (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off')
+            || (strtolower((string) $request->getHeaderLine('X-Forwarded-Proto')) === 'https')
+            || ((int) ($_SERVER['SERVER_PORT'] ?? 0) === 443);
+
+        if ($isHttps && defined('ENVIRONMENT') && ENVIRONMENT === 'production') {
+            $this->response->setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+        }
+
+        $csp = implode('; ', [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://challenges.cloudflare.com https://app.midtrans.com https://app.sandbox.midtrans.com",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+            "font-src 'self' https://fonts.gstatic.com data:",
+            "img-src 'self' data: blob: https:",
+            "connect-src 'self' blob: https://cdn.jsdelivr.net https://challenges.cloudflare.com",
+            "frame-src 'self' https://challenges.cloudflare.com https://app.midtrans.com https://app.sandbox.midtrans.com",
+            "object-src 'none'",
+            "base-uri 'self'",
+            "form-action 'self'",
+            "frame-ancestors 'self'",
+        ]);
+        $this->response->setHeader('Content-Security-Policy', $csp);
     }
 }
