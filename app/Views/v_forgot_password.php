@@ -14,6 +14,7 @@
     <style>
         .font-pixel { font-family: 'Press Start 2P', cursive; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
+        input::-ms-reveal, input::-ms-clear { display: none; }
     </style>
 </head>
 <body class="w-full bg-[url('<?= base_url('image/background_retro.png') ?>')] text-black font-mono min-h-screen flex flex-col justify-center items-center px-4 py-8">
@@ -72,8 +73,7 @@
                     <div class="flex border-2 border-black bg-white focus-within:bg-gray-100">
                         <input type="password" id="forgot_new_pwd" name="new_password" required minlength="8" placeholder="Min. 8 karakter (huruf + angka)"
                             class="w-full px-4 py-3 bg-transparent text-black focus:outline-none font-bold text-sm">
-                        <button type="button" onclick="toggleForgotPwd('forgot_new_pwd', this)"
-                            class="px-3 bg-gray-100 hover:bg-black hover:text-white border-l-2 border-black text-[10px] font-bold uppercase">LIHAT</button>
+                        <?= view('partials/pwd_toggle_btn', ['target' => 'forgot_new_pwd', 'label' => 'Lihat sandi baru']) ?>
                     </div>
                 </div>
 
@@ -82,8 +82,7 @@
                     <div class="flex border-2 border-black bg-white focus-within:bg-gray-100">
                         <input type="password" id="forgot_confirm_pwd" name="confirm_password" required minlength="8" placeholder="Ulangi sandi baru"
                             class="w-full px-4 py-3 bg-transparent text-black focus:outline-none font-bold text-sm">
-                        <button type="button" onclick="toggleForgotPwd('forgot_confirm_pwd', this)"
-                            class="px-3 bg-gray-100 hover:bg-black hover:text-white border-l-2 border-black text-[10px] font-bold uppercase">LIHAT</button>
+                        <?= view('partials/pwd_toggle_btn', ['target' => 'forgot_confirm_pwd', 'label' => 'Lihat konfirmasi sandi baru']) ?>
                     </div>
                 </div>
 
@@ -136,14 +135,6 @@
         <?php endif; ?>
     </div>
 
-    <script>
-        function toggleForgotPwd(id, btn) {
-            const input = document.getElementById(id);
-            if (!input || !btn) return;
-            const show = input.type === 'password';
-            input.type = show ? 'text' : 'password';
-            btn.textContent = show ? 'TUTUP' : 'LIHAT';
-        }
-    </script>
+    <?= view('partials/pwd_toggle_script') ?>
 </body>
 </html>

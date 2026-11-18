@@ -83,8 +83,7 @@
                         <input type="password" id="brevo_api_key" name="brevo_api_key" autocomplete="new-password"
                             placeholder="<?= !empty($c['has_brevo_key']) ? 'Sudah tersimpan (' . (int) ($c['brevo_key_len'] ?? 0) . ' karakter — kosongkan jika tetap)' : 'xkeysib-...' ?>"
                             class="w-full px-3 py-2.5 bg-transparent text-xs font-bold outline-none">
-                        <button type="button" onclick="toggleSecretInput('brevo_api_key', this)"
-                            class="px-3 bg-gray-100 hover:bg-black hover:text-white border-l-2 border-black text-[10px] font-bold uppercase">LIHAT</button>
+                        <?= view('partials/pwd_toggle_btn', ['target' => 'brevo_api_key', 'label' => 'Lihat API key Brevo']) ?>
                     </div>
                     <span class="block text-[10px] text-gray-600 font-bold mt-1">
                         Demi keamanan, key yang sudah tersimpan sengaja disembunyikan dari kotak input (cukup kosongkan jika tidak mengganti key).
@@ -131,8 +130,7 @@
                             <input type="password" id="smtp_pass" name="smtp_pass" autocomplete="new-password"
                                 placeholder="<?= !empty($c['has_smtp_pass']) ? 'Sudah tersimpan (' . (int) ($c['smtp_pass_len'] ?? 0) . ' karakter)' : '16 huruf App Password Google' ?>"
                                 class="w-full px-3 py-2.5 bg-transparent text-xs font-bold outline-none">
-                            <button type="button" onclick="toggleSecretInput('smtp_pass', this)"
-                                class="px-3 bg-gray-100 hover:bg-black hover:text-white border-l-2 border-black text-[10px] font-bold uppercase">LIHAT</button>
+                            <?= view('partials/pwd_toggle_btn', ['target' => 'smtp_pass', 'label' => 'Lihat SMTP App Password']) ?>
                         </div>
                         <?php if (!empty($c['has_smtp_pass']) && str_contains(strtolower((string) ($c['smtp_host'] ?? '')), 'gmail') && (int) ($c['smtp_pass_len'] ?? 0) !== 16): ?>
                             <span class="block text-[10px] text-red-700 font-bold mt-1">[!] Panjang sandi tersimpan <?= (int) $c['smtp_pass_len'] ?> karakter. App Password Gmail wajib 16 huruf!</span>
@@ -192,19 +190,12 @@
     </div>
 </div>
 
+<?= view('partials/pwd_toggle_script') ?>
 <script>
     function toggleDriverFields() {
         const drv = document.getElementById('otp_driver').value;
         document.getElementById('box-brevo').classList.toggle('hidden', drv !== 'brevo');
         document.getElementById('box-smtp').classList.toggle('hidden', drv !== 'smtp');
-    }
-
-    function toggleSecretInput(id, btn) {
-        const el = document.getElementById(id);
-        if (!el || !btn) return;
-        const show = el.type === 'password';
-        el.type = show ? 'text' : 'password';
-        btn.textContent = show ? 'TUTUP' : 'LIHAT';
     }
 </script>
 

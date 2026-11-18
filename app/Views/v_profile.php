@@ -11,6 +11,7 @@
     <style>
         .font-pixel { font-family: 'Press Start 2P', cursive; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
+        input::-ms-reveal, input::-ms-clear { display: none; }
     </style>
 </head>
 <body class="bg-[#111] text-black font-mono min-h-screen flex justify-center">
@@ -116,8 +117,7 @@
                             <div class="flex border-2 border-black bg-white focus-within:bg-gray-100">
                                 <input type="password" id="current_password" name="current_password" required placeholder="Masukkan sandi saat ini"
                                     class="w-full px-3 py-2.5 bg-transparent text-black focus:outline-none font-bold text-sm">
-                                <button type="button" onclick="toggleProfilePwd('current_password', this)"
-                                    class="px-3 bg-gray-100 hover:bg-black hover:text-white border-l-2 border-black text-[10px] font-bold uppercase">LIHAT</button>
+                                <?= view('partials/pwd_toggle_btn', ['target' => 'current_password', 'label' => 'Lihat sandi saat ini']) ?>
                             </div>
                         </div>
 
@@ -126,8 +126,7 @@
                             <div class="flex border-2 border-black bg-white focus-within:bg-gray-100">
                                 <input type="password" id="profile_new_password" name="new_password" required minlength="8" placeholder="Min. 8 karakter (huruf + angka)"
                                     class="w-full px-3 py-2.5 bg-transparent text-black focus:outline-none font-bold text-sm">
-                                <button type="button" onclick="toggleProfilePwd('profile_new_password', this)"
-                                    class="px-3 bg-gray-100 hover:bg-black hover:text-white border-l-2 border-black text-[10px] font-bold uppercase">LIHAT</button>
+                                <?= view('partials/pwd_toggle_btn', ['target' => 'profile_new_password', 'label' => 'Lihat sandi baru']) ?>
                             </div>
                         </div>
 
@@ -136,8 +135,7 @@
                             <div class="flex border-2 border-black bg-white focus-within:bg-gray-100">
                                 <input type="password" id="profile_confirm_password" name="confirm_password" required minlength="8" placeholder="Ulangi sandi baru"
                                     class="w-full px-3 py-2.5 bg-transparent text-black focus:outline-none font-bold text-sm">
-                                <button type="button" onclick="toggleProfilePwd('profile_confirm_password', this)"
-                                    class="px-3 bg-gray-100 hover:bg-black hover:text-white border-l-2 border-black text-[10px] font-bold uppercase">LIHAT</button>
+                                <?= view('partials/pwd_toggle_btn', ['target' => 'profile_confirm_password', 'label' => 'Lihat konfirmasi sandi baru']) ?>
                             </div>
                         </div>
 
@@ -311,15 +309,8 @@
         </main>
     </div>
 
+    <?= view('partials/pwd_toggle_script') ?>
     <script>
-        function toggleProfilePwd(inputId, btn) {
-            const input = document.getElementById(inputId);
-            if (!input || !btn) return;
-            const show = input.type === 'password';
-            input.type = show ? 'text' : 'password';
-            btn.textContent = show ? 'TUTUP' : 'LIHAT';
-        }
-
         (function () {
             const rem = <?= (int) ($otp_cooldown ?? 0) ?>;
             const btn = document.getElementById('btn-profile-send-otp');

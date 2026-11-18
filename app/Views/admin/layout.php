@@ -17,6 +17,7 @@
     <style>
         .font-pixel { font-family: 'Press Start 2P', cursive; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
+        input::-ms-reveal, input::-ms-clear { display: none; }
     </style>
 </head>
 <body class="bg-[url('<?= base_url('image/background_retro.png') ?>')] bg-repeat font-sans">
