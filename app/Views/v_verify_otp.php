@@ -72,19 +72,24 @@
 
     <script>
         (function () {
-            let rem = <?= (int) ($cooldown_remaining ?? 0) ?>;
+            const rem = <?= (int) ($cooldown_remaining ?? 0) ?>;
             const btn = document.getElementById('btn-resend-otp');
             if (!btn || rem <= 0) return;
-            const timer = setInterval(() => {
-                rem--;
-                if (rem <= 0) {
+            const endAt = Date.now() + (rem * 1000);
+            const tick = () => {
+                const left = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
+                if (left <= 0) {
                     clearInterval(timer);
                     btn.disabled = false;
                     btn.textContent = 'KIRIM ULANG KODE OTP';
                 } else {
-                    btn.textContent = 'KIRIM ULANG (' + rem + 'S)';
+                    btn.textContent = 'KIRIM ULANG (' + left + 'S)';
                 }
-            }, 1000);
+            };
+            const timer = setInterval(tick, 500);
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) tick();
+            });
         })();
     </script>
 </body>

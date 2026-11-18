@@ -164,7 +164,7 @@
                             <form method="POST" action="<?= base_url('profile/send-otp') ?>">
                                 <?= csrf_field() ?>
                                 <?php $ocd = (int) ($otp_cooldown ?? 0); ?>
-                                <button type="submit" <?= $ocd > 0 ? 'disabled' : '' ?>
+                                <button type="submit" id="btn-profile-send-otp" <?= $ocd > 0 ? 'disabled' : '' ?>
                                     class="w-full bg-blue-600 hover:bg-blue-800 disabled:opacity-50 text-white font-pixel text-[9px] px-4 py-3 border-2 border-black uppercase">
                                     <?= $ocd > 0 ? 'KIRIM ULANG OTP (' . $ocd . 'S)' : 'KIRIM KODE OTP VERIFIKASI' ?>
                                 </button>
@@ -319,6 +319,27 @@
             input.type = show ? 'text' : 'password';
             btn.textContent = show ? 'TUTUP' : 'LIHAT';
         }
+
+        (function () {
+            const rem = <?= (int) ($otp_cooldown ?? 0) ?>;
+            const btn = document.getElementById('btn-profile-send-otp');
+            if (!btn || rem <= 0) return;
+            const endAt = Date.now() + (rem * 1000);
+            const tick = () => {
+                const left = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
+                if (left <= 0) {
+                    clearInterval(timer);
+                    btn.disabled = false;
+                    btn.textContent = 'KIRIM KODE OTP VERIFIKASI';
+                } else {
+                    btn.textContent = 'KIRIM ULANG OTP (' + left + 'S)';
+                }
+            };
+            const timer = setInterval(tick, 500);
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) tick();
+            });
+        })();
     </script>
 </body>
 </html>
